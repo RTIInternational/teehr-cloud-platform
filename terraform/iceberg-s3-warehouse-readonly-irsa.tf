@@ -1,4 +1,8 @@
-# Read-only access for Spark and Jupyter service accounts
+# Read-only access for the Jupyter service account to external, non-warehouse
+# data only (e.g. ciroh-rti-hefs-data). Warehouse access no longer goes
+# through this role for anyone — Spark was removed, and Jupyter's own
+# Iceberg warehouse reads now go through Polaris-vended credentials like
+# every other client. This role name is legacy; its scope is now HEFS-only.
 data "aws_iam_policy_document" "iceberg_s3_warehouse_readonly_trust_policy" {
   statement {
     effect  = "Allow"
@@ -13,7 +17,6 @@ data "aws_iam_policy_document" "iceberg_s3_warehouse_readonly_trust_policy" {
       test     = "StringEquals"
       variable = "${replace(module.eks.cluster_oidc_issuer_url, "https://", "")}:sub"
       values = [
-        "system:serviceaccount:teehr-hub:spark",
         "system:serviceaccount:teehr-hub:jupyter"
       ]
     }
@@ -24,7 +27,7 @@ resource "aws_iam_role" "iceberg_s3_warehouse_readonly_irsa" {
   name               = "teehr-hub-iceberg-s3-warehouse-readonly-irsa"
   assume_role_policy = data.aws_iam_policy_document.iceberg_s3_warehouse_readonly_trust_policy.json
   tags = {
-    "teehr-hub/role" = "iceberg-s3-warehouse-readonly"
+    "teehr-hub/role" = "jupyter-external-data-readonly"
   }
 }
 
@@ -36,8 +39,6 @@ data "aws_iam_policy_document" "iceberg_s3_warehouse_readonly" {
       "s3:ListBucket"
     ]
     resources = [
-      aws_s3_bucket.teehr_iceberg_warehouse.arn,
-      "${aws_s3_bucket.teehr_iceberg_warehouse.arn}/*",
       "arn:aws:s3:::ciroh-rti-hefs-data",
       "arn:aws:s3:::ciroh-rti-hefs-data/*"
     ]

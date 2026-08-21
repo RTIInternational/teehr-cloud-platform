@@ -1,21 +1,15 @@
+# Trusted only by Polaris's own IRSA role. Trino, Spark, and Prefect no
+# longer assume this role directly — they access warehouse data exclusively
+# through Polaris-vended, per-request scoped credentials, and Polaris is the
+# one that assumes this role (via STS AssumeRole) to mint them.
 data "aws_iam_policy_document" "iceberg_s3_warehouse_trust_policy" {
   statement {
     effect  = "Allow"
-    actions = ["sts:AssumeRoleWithWebIdentity"]
+    actions = ["sts:AssumeRole"]
 
     principals {
-      type        = "Federated"
-      identifiers = [module.eks.oidc_provider_arn]
-    }
-
-    condition {
-      test     = "StringEquals"
-      variable = "${replace(module.eks.cluster_oidc_issuer_url, "https://", "")}:sub"
-      values = [
-        "system:serviceaccount:teehr-hub:prefect-job",
-        "system:serviceaccount:teehr-hub:trino",
-        "system:serviceaccount:teehr-hub:iceberg-rest"
-      ]
+      type        = "AWS"
+      identifiers = [aws_iam_role.polaris_irsa.arn]
     }
   }
 }
