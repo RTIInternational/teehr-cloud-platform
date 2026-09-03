@@ -1,3 +1,10 @@
+# Icechunk warehouse access policies.
+#
+# Policies only — no role attachments. Icechunk stores are plain S3 zarr data,
+# not Iceberg tables, so Polaris cannot vend credentials for them; consumers
+# hold their own narrowly-scoped IRSA roles and attach these policies
+# themselves (see prefect-job-irsa.tf and xpublish-api-irsa.tf).
+
 data "aws_iam_policy_document" "icechunk_s3_warehouse_rw" {
   statement {
     effect = "Allow"
@@ -19,11 +26,6 @@ resource "aws_iam_policy" "icechunk_s3_warehouse_rw" {
   policy = data.aws_iam_policy_document.icechunk_s3_warehouse_rw.json
 }
 
-resource "aws_iam_role_policy_attachment" "icechunk_s3_warehouse_rw" {
-  role       = aws_iam_role.iceberg_s3_warehouse_irsa.name
-  policy_arn = aws_iam_policy.icechunk_s3_warehouse_rw.arn
-}
-
 data "aws_iam_policy_document" "icechunk_s3_warehouse_readonly" {
   statement {
     effect = "Allow"
@@ -41,9 +43,4 @@ data "aws_iam_policy_document" "icechunk_s3_warehouse_readonly" {
 resource "aws_iam_policy" "icechunk_s3_warehouse_readonly" {
   name   = "teehr-hub-icechunk-s3-warehouse-readonly"
   policy = data.aws_iam_policy_document.icechunk_s3_warehouse_readonly.json
-}
-
-resource "aws_iam_role_policy_attachment" "icechunk_s3_warehouse_readonly" {
-  role       = aws_iam_role.iceberg_s3_warehouse_readonly_irsa.name
-  policy_arn = aws_iam_policy.icechunk_s3_warehouse_readonly.arn
 }

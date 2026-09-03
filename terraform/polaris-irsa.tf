@@ -1,5 +1,5 @@
 # IRSA for Polaris — its own AWS identity, used to assume the Iceberg
-# warehouse data-access role (teehr-hub-iceberg-s3-warehouse-irsa) and vend
+# warehouse data-access role (teehr-hub-iceberg-s3-warehouse-access) and vend
 # scoped, short-lived S3 credentials to catalog clients (Trino, Spark,
 # Prefect, Jupyter) via the Iceberg REST catalog protocol. Polaris is the
 # only service in the cluster with standing access to the warehouse bucket.
@@ -34,12 +34,16 @@ data "aws_iam_policy_document" "polaris_assume_warehouse_role" {
   statement {
     effect    = "Allow"
     actions   = ["sts:AssumeRole"]
-    resources = [aws_iam_role.iceberg_s3_warehouse_irsa.arn]
+    resources = [aws_iam_role.iceberg_s3_warehouse_access.arn]
   }
 }
 
-resource "aws_iam_role_policy" "polaris_assume_warehouse_role" {
+resource "aws_iam_policy" "polaris_assume_warehouse_role" {
   name   = "teehr-hub-polaris-assume-warehouse-role"
-  role   = aws_iam_role.polaris_irsa.name
   policy = data.aws_iam_policy_document.polaris_assume_warehouse_role.json
+}
+
+resource "aws_iam_role_policy_attachment" "polaris_assume_warehouse_role" {
+  role       = aws_iam_role.polaris_irsa.name
+  policy_arn = aws_iam_policy.polaris_assume_warehouse_role.arn
 }
