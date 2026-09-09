@@ -26,6 +26,39 @@ locals {
     }
   }
 
+  # Node groups that run Spark executors need far more ephemeral storage than
+  # the 80 GB default above. Spark puts SPARK_LOCAL_DIRS on an emptyDir backed
+  # by the root volume, and r5.4xlarge has no instance store, so shuffle lands
+  # on this disk.
+  #
+  # At 80 GB (~71 GiB allocatable) and a 20Gi per-executor request, disk capped
+  # a node at 3 executors while its 16 vCPU allowed 8 and its memory allowed 6 --
+  # so most of each instance was paid for and idle, and runs died when shuffle
+  # exhausted the volume (executor evictions, then FetchFailed /
+  # "Missing an output location for shuffle N"). A 2026-09-09 run wrote 1,243 GB
+  # of shuffle, ~19.4 GB per executor against that 20Gi request.
+  #
+  # 300 GB lets memory become the binding constraint at 6 executors per node,
+  # halving the node count for a given executor count. The extra 220 GB of gp3
+  # costs roughly 3% of one instance-hour, so this is about half the money for
+  # the same compute.
+  #
+  # Throughput is raised from the 150 MB/s default because denser nodes share
+  # one volume: 6 executors writing ~113 GB per node is ~13 min of pure write
+  # at 150 MB/s versus ~8 at 250. gp3 bills only the amount above 125 MB/s.
+  spark_executor_block_device_mappings = {
+    xvda = {
+      device_name = "/dev/xvda"
+      ebs = {
+        volume_size           = 300
+        volume_type           = "gp3"
+        iops                  = 3000
+        throughput            = 250
+        delete_on_termination = true
+      }
+    }
+  }
+
   # Generate project-specific nb-r5-xlarge node groups
   project_nb_r5_xlarge_node_groups = {
     for project_id in var.project_ids : "nb-r5-xlarge-${lower(project_id)}" => merge(local.eks_node_group_defaults, {
@@ -321,6 +354,8 @@ module "eks" {
       name          = "nb-r5-4xlarge"
       iam_role_name = "${local.cluster_name}-nb-r5-4xlarge"
 
+      block_device_mappings = local.spark_executor_block_device_mappings
+
       min_size     = 0
       max_size     = 400
       desired_size = 0
@@ -361,6 +396,8 @@ module "eks" {
       name          = "spark-r5-4xlarge"
       iam_role_name = "${local.cluster_name}-spark-r5-4xlarge"
 
+      block_device_mappings = local.spark_executor_block_device_mappings
+
       min_size     = 0
       max_size     = 400
       desired_size = 0
@@ -397,6 +434,8 @@ module "eks" {
     spark-r5-4xlarge-spot = merge(local.eks_node_group_defaults, {
       name          = "spark-r5-4xlarge-spot"
       iam_role_name = "${local.cluster_name}-spark-r5-4xlarge-spot"
+
+      block_device_mappings = local.spark_executor_block_device_mappings
 
       capacity_type = "SPOT"
 
