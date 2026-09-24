@@ -2,12 +2,17 @@ resource "helm_release" "cert_manager" {
   name             = "cert-manager"
   repository       = "https://charts.jetstack.io"
   chart            = "cert-manager"
-  version          = "v1.12.0"
+  version          = "v1.21.2"
   namespace        = "cert-manager"
   create_namespace = false
 
   values = [yamlencode({
-    installCRDs = true
+    # installCRDs is deprecated as of chart v1.15; crds.keep leaves the CRDs
+    # (and therefore the Certificate resources) in place on an uninstall.
+    crds = {
+      enabled = true
+      keep    = true
+    }
   })]
 }
 
