@@ -37,6 +37,12 @@ terraform output
 2. Record key output values needed by app deployment workflows.
 3. Re-run `terraform plan -var-file=teehr-hub.tfvars` and confirm it reports no pending changes.
 
+### Upgrading the EKS version
+
+EKS only moves one minor version at a time, and each hop needs its node groups rolled and
+verified before the next one. The procedure, the current version support dates, and the
+per-version breaking changes are in [docs/eks-upgrade.md](docs/eks-upgrade.md).
+
 ### Migration Notes
 
 Historical migration details for cert-manager, Contour, and Cluster Autoscaler live in [docs/migration-notes.md](docs/migration-notes.md). Those import steps were only needed for the initial adoption of existing cluster resources, not for routine updates.
