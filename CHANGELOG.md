@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-09-24
+
+### Summary
+- Upgraded the EKS control plane from Kubernetes 1.33 to 1.36, applied one minor version at a time.
+- Bumped cluster-autoscaler, node-termination-handler and Contour to versions compatible with the new control plane.
+
+### What Changed
+- `cluster_version` moves 1.33 -> 1.34 -> 1.35 -> 1.36, one commit per hop.
+- cluster-autoscaler chart 9.29.0 -> 9.59.0, with the image tag now selected from `var.cluster_version`.
+- aws-node-termination-handler v1.22.0 -> v1.25.6.
+- Contour re-vendored v1.33.0 -> v1.33.7.
+- Added `docs/eks-upgrade.md` with the apply order, per-hop verification and rollback.
+
+### Why
+- 1.33 left standard support on 2026-07-29 and was billing at the extended-support rate. 1.36 carries standard support to 2027-08-02.
+- cluster-autoscaler was pinned to v1.27.1, six minor versions behind the control plane.
+
+### Applied
+- All three hops applied and verified on 2026-09-24.
+- Two DaemonSets failed the first apply with `Provider produced inconsistent result after apply` on `deprecated.daemonset.template.generation`. The writes had succeeded; re-running the apply converged. Open provider bug, unfixed in kubernetes v3.2.1.
+
+### Known Gaps
+- Contour 1.33.7 is tested against Kubernetes 1.34/1.33/1.32 only, so it now runs two minors past its tested matrix. Accepted deliberately: Contour has not cut a minor since 2025-09-09 and 1.34.0 has no release branch, so waiting had no end date, while holding at 1.34 would have cost roughly $365/month in extended support from 2026-12-02. Revisit when Contour 1.34 ships. Reasoning recorded in `docs/eks-upgrade.md`.
+- cert-manager remains on chart v1.12.0 and is being updated separately.
+
 ## 2026-07-07
 
 ### Summary

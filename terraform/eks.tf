@@ -427,7 +427,7 @@ module "eks" {
         "k8s.io/cluster-autoscaler/node-template/taint/teehr-hub/dedicated"                 = "worker:NoSchedule"
         "k8s.io/cluster-autoscaler/node-template/taint/teehr-hub_dedicated"                 = "worker:NoSchedule"
         "teehr-hub/nodegroup-name"                                                          = "spark-r5-4xlarge"
-        "Project"                                                                          = "TEEHR"
+        "Project"                                                                           = "TEEHR"
       }
     })
 

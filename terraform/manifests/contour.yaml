@@ -8798,7 +8798,6 @@ spec:
                                   The supported values are: "TCP", "UDP", "SCTP"
                                 type: string
                             required:
-                            - error
                             - port
                             - protocol
                             type: object
@@ -9140,7 +9139,7 @@ rules:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: contour-certgen-v1-33-0
+  name: contour-certgen-v1-33-7
   namespace: projectcontour
 spec:
   template:
@@ -9150,7 +9149,7 @@ spec:
     spec:
       containers:
       - name: contour
-        image: ghcr.io/projectcontour/contour:v1.33.0
+        image: ghcr.io/projectcontour/contour:v1.33.7
         imagePullPolicy: IfNotPresent
         command:
         - contour
@@ -9408,7 +9407,7 @@ spec:
         - --contour-key-file=/certs/tls.key
         - --config-path=/config/contour.yaml
         command: ["contour"]
-        image: ghcr.io/projectcontour/contour:v1.33.0
+        image: ghcr.io/projectcontour/contour:v1.33.7
         imagePullPolicy: IfNotPresent
         name: contour
         ports:
@@ -9492,7 +9491,7 @@ spec:
         args:
           - envoy
           - shutdown-manager
-        image: ghcr.io/projectcontour/contour:v1.33.0
+        image: ghcr.io/projectcontour/contour:v1.33.7
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
@@ -9513,7 +9512,7 @@ spec:
         - --log-level info
         command:
         - envoy
-        image: docker.io/envoyproxy/envoy:distroless-v1.35.2
+        image: docker.io/envoyproxy/envoy:distroless-v1.38.4
         imagePullPolicy: IfNotPresent
         name: envoy
         env:
@@ -9537,7 +9536,6 @@ spec:
           name: https
           protocol: TCP
         - containerPort: 8002
-          hostPort: 8002
           name: metrics
           protocol: TCP
         readinessProbe:
@@ -9574,7 +9572,7 @@ spec:
         - --envoy-key-file=/certs/tls.key
         command:
         - contour
-        image: ghcr.io/projectcontour/contour:v1.33.0
+        image: ghcr.io/projectcontour/contour:v1.33.7
         imagePullPolicy: IfNotPresent
         name: envoy-initconfig
         volumeMounts:
