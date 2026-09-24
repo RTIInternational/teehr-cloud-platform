@@ -10,7 +10,7 @@
 - Added `docs/cert-manager-upgrade.md` with the procedure, pre-flight checks and rollback.
 
 ### Why
-- cert-manager does not support jumping minor versions, and v1.12.0 (May 2023) predates Kubernetes 1.28, so it is well outside its tested range on the upgraded control plane.
+- cert-manager does not support jumping minor versions, and v1.12.0 (May 2023) predates Kubernetes 1.28, so it is well outside its tested range on the upgraded control plane. v1.21 is tested on Kubernetes 1.33 through 1.36.
 - The v1.12 chart renders its CRDs without `helm.sh/resource-policy: keep`; `crds.keep` prevents a future uninstall from deleting every Certificate in the cluster.
 
 ## 2026-09-24

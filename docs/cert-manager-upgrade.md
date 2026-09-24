@@ -4,6 +4,10 @@ cert-manager does not support jumping minor versions: upstream says to upgrade o
 a time, and v1.12 to v1.21 is nine of them. Their documented alternative for a gap this
 large is a full uninstall and re-install, which is what this change does.
 
+v1.21 is tested and supported on Kubernetes 1.33 through 1.36, so it is squarely inside its
+supported matrix on this cluster — unlike Contour, which the EKS upgrade left running two
+minors past its own. v1.12.0 is the outlier here, not the target.
+
 That is safe here for one specific reason: **nothing about the certificate set is
 imperative.** All six Certificates are rendered from
 `teehr-cloud-core/cert-manager/manifests/cert.yaml.tpl` in the `teehr-hub` repo and the
