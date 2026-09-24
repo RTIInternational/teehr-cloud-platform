@@ -88,6 +88,23 @@ Check for a new release before starting:
 curl -s https://api.github.com/repos/projectcontour/contour/releases/latest | jq -r .tag_name
 ```
 
+### Decision, 2026-09-24: proceed to 1.36 anyway
+
+Waiting was rejected because it has no end date. Contour's last minor, v1.33.0, shipped
+2025-09-09 — twelve months with nothing since, against a historical cadence of two to four
+months. The 1.34.0 milestone is open with no release branch. Meanwhile 1.34 leaves standard
+support on 2026-12-02, and extended support costs $0.60 per cluster-hour against $0.10, so
+holding would have cost roughly $365/month from December with no way to predict the wait.
+
+The risk was judged acceptable because nothing Contour depends on changes in 1.35 or 1.36.
+It uses Ingress v1, its own HTTPProxy CRDs, Gateway API, Leases and EndpointSlices, all
+stable APIs. The breaking changes in those releases — cgroup v1 removal, IPVS removal,
+gitRepo volumes, SELinux labeling — are node-level or kube-proxy-level and do not touch the
+ingress control plane. Each hop also keeps a 7-day rollback window.
+
+What that buys is untested, not unsupported-by-design. Verify ingress properly after hops 2
+and 3 rather than relying on pods being `Running`, and revisit when Contour 1.34 ships.
+
 ## Working through the hops locally
 
 Stay on the branch and walk `cluster_version` in `teehr-hub.tfvars` forward one minor at a
@@ -196,7 +213,27 @@ kubectl get nodes -o custom-columns=NAME:.metadata.name,VERSION:.status.nodeInfo
   cluster-autoscaler all healthy.
 - `kubectl -n kube-system logs deploy/cluster-autoscaler --tail=50` — no API errors, and
   the image tag matches the new cluster minor.
-- Ingress still serves: JupyterHub, the API, and the frontend all reachable.
+- Ingress still serves. From hop 2 onward Contour is outside its tested matrix, so check it
+  properly rather than trusting pod status — a healthy Envoy that has stopped receiving
+  xDS updates still looks `Running`:
+
+  ```bash
+  kubectl -n projectcontour logs deploy/contour --tail=100     # no xDS or watch errors
+  kubectl get httpproxy -A                                     # every one still "valid"
+  kubectl get ingress -A
+  ```
+
+  Then exercise each hostname end to end, not just the TLS handshake — a 200 from behind
+  the proxy proves routing, not just that Envoy is listening:
+
+  ```bash
+  for h in hub api auth prefect minio xpublish-api; do
+    printf '%-14s %s\n' "$h" "$(curl -s -o /dev/null -w '%{http_code}' "https://$h.<hostname>/")"
+  done
+  ```
+
+  Changing an HTTPProxy and watching it take effect is the strongest signal that the xDS
+  path is still live.
 - Trigger a scale-up on one notebook node group and one spot Spark node group to confirm
   autoscaling and the node-termination-handler still work on the new AMI.
 - `terraform plan -var-file=teehr-hub.tfvars` reports no pending changes.
