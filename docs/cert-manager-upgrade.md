@@ -65,9 +65,11 @@ Check no certificate is close to expiry. Renewal is paused for the length of the
 anything renewing in the next few days should be dealt with first:
 
 ```bash
-kubectl get certificates -A -o custom-columns=\
-NAME:.metadata.name,READY:.status.conditions[0].status,RENEWAL:.status.renewalTime,EXPIRY:.status.notAfter
+kubectl get certificates -A -o 'custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,READY:.status.conditions[?(@.type=="Ready")].status,RENEWAL:.status.renewalTime,EXPIRY:.status.notAfter'
 ```
+
+Quote the whole `-o` argument. Unquoted, zsh treats the brackets as a glob and fails with
+`no matches found` before kubectl ever runs.
 
 Record the six Secret names so you can confirm afterwards that they were adopted rather
 than reissued — compare `notAfter` before and after; an adopted certificate keeps its
@@ -138,8 +140,7 @@ garden deploy core-certs
 ### 6. Verify adoption, not reissue
 
 ```bash
-kubectl get certificates -A -o custom-columns=\
-NAME:.metadata.name,READY:.status.conditions[0].status,EXPIRY:.status.notAfter
+kubectl get certificates -A -o 'custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,READY:.status.conditions[?(@.type=="Ready")].status,EXPIRY:.status.notAfter'
 ```
 
 All six should go `Ready=True` within a minute or so, with `notAfter` **unchanged** from the
