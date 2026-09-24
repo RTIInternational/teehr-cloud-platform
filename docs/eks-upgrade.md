@@ -183,6 +183,42 @@ kubectl get nodes -o custom-columns=NAME:.metadata.name,VERSION:.status.nodeInfo
   autoscaling and the node-termination-handler still work on the new AMI.
 - `terraform plan -var-file=teehr-hub.tfvars` reports no pending changes.
 
+## Known snag: DaemonSet annotation drift
+
+Any apply that changes a DaemonSet pod template in `manifests/` fails like this:
+
+```
+Error: Provider produced inconsistent result after apply
+  .object.metadata.annotations["deprecated.daemonset.template.generation"]:
+  was cty.StringVal("1"), but now cty.StringVal("2")
+```
+
+The DaemonSet controller bumps that annotation whenever the pod template changes, and
+`kubernetes_manifest` round-trip checks the entire object and rejects the response. It is an
+open provider bug
+([#2722](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2722)); the fix
+([#2941](https://github.com/hashicorp/terraform-provider-kubernetes/pull/2941)) postdates the
+newest release, v3.2.1.
+
+**The write succeeded.** "Inconsistent result *after* apply" means the API server accepted
+the change and the provider disliked the response. Confirm in-cluster, then re-run the
+apply. The second pass does not touch the pod template, so nothing bumps the annotation and
+it converges:
+
+```bash
+kubectl -n kube-system get ds aws-node-termination-handler \
+  -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+kubectl -n projectcontour get ds envoy \
+  -o jsonpath='{.spec.template.spec.containers[*].image}{"\n"}'
+```
+
+Explicit `computed_fields` does not help, despite `metadata.annotations` being in its
+default ([#1591](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1591)).
+
+This is the same root cause as the CRD and Job filtering in `contour.tf`. Deploying Contour
+from its official Helm chart instead of vendored YAML would retire the whole class of
+problem, but that is its own piece of work, not something to start mid-upgrade.
+
 ## Rollback
 
 A hop can be rolled back to the previous minor within 7 days of completing, via
