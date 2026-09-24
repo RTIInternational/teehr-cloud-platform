@@ -131,11 +131,26 @@ existing ACME account is reused.
 
 ### 5. Recreate the Certificates
 
-From the `teehr-hub` repo, against the remote environment:
+Trigger the `teehr-hub` deploy workflow rather than running Garden by hand — cluster changes
+go through CI/CD, and it is the known-good path:
 
 ```bash
-garden deploy core-certs
+gh workflow run deploy-to-remote.yaml --repo RTIInternational/teehr-hub
+gh run watch --repo RTIInternational/teehr-hub
 ```
+
+**Wait for the ClusterIssuer to report Ready first.** Certificates created against a
+non-ready issuer fail, and you end up debugging two problems instead of one.
+
+The workflow runs `deploy --force-build --env remote`, so it rebuilds every image and
+redeploys the whole stack, not just the six Certificates. It takes a while and it will
+surface any unrelated breakage on `main` in the middle of this window. That is the
+trade-off for using the path CI already exercises.
+
+Running Garden locally instead needs `garden deploy core-certs --env remote`. The `--env` is
+not optional: `project.garden.yml` sets `defaultEnvironment: local`, so a bare
+`garden deploy` targets KinD, and `core-certs` is declared `environments: [remote]` so it
+would not even be in the graph.
 
 ### 6. Verify adoption, not reissue
 
