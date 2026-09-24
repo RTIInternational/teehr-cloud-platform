@@ -28,6 +28,16 @@ the cluster. This is expected and is why step 1 is a backup.
 
 The v1.21.2 values set `crds.keep = true`, so a future uninstall will not do this again.
 
+## Before you start
+
+No CI applies this repo, so the whole procedure is run by hand. `eks:*` needs an MFA
+session and `kubectl` needs the `teehr-hub-teehr-hub-admin` role; see
+[eks-upgrade.md](eks-upgrade.md#credentials).
+
+Step 1 uses the `helm` CLI directly. Helm 4 reads Helm 3 release records, so a Helm 4
+client can uninstall this release even though the Terraform provider created it — but if
+you have both on `PATH`, check which one you are about to run.
+
 ## Pre-flight
 
 Confirm the certificate-owner-ref flag is not set. This must return nothing:
