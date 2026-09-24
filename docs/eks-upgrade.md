@@ -158,12 +158,30 @@ The EKS addons (coredns, kube-proxy, vpc-cni, ebs-csi, efs-csi) have no
 version pinned, so they resolve to the default for the new cluster version as part of the
 same apply.
 
-### 3. Roll the node groups
+### 3. Node groups
 
-Managed node groups are **not** upgraded with the control plane. The apply updates the
-launch templates, but existing nodes keep their old kubelet until they are replaced. With
-`min_size = 0` on every group except `core-a`, the scale-to-zero groups pick up the new AMI
-on their next scale-up; `core-a` needs a deliberate roll.
+The apply rolls them for you. `main.tf` in the EKS module passes
+`coalesce(var.kubernetes_version, aws_eks_cluster.this[0].version)` down to each node group,
+which sets `version` on every `aws_eks_node_group`, so bumping `cluster_version` updates all
+of them in the same apply. This is the slow part: the control plane takes about ten minutes,
+then roughly twenty node groups update behind it.
+
+Most are cheap. Every group except `core-a` sits at `desired_size = 0`, so there is nothing
+to drain and the update returns almost immediately. `core-a` has a running node and is the
+one that actually rolls — EKS surges a replacement (`max_size = 6` leaves room), drains the
+old node, and respects PodDisruptionBudgets.
+
+**`force_update_version` is not set**, so a PDB that cannot be satisfied will fail the node
+group update rather than evict through it. `core-a` carries the core platform pods, and a
+single-replica Deployment with `minAvailable: 1` will block its own eviction. If an update
+hangs, that is the first thing to look at:
+
+```bash
+kubectl get pdb -A
+kubectl -n <ns> describe pdb <name>     # ALLOWED DISRUPTIONS: 0 is the tell
+```
+
+Scale the offending Deployment to two replicas, or relax the PDB, and the drain proceeds.
 
 Watch for node groups stuck on a stale version:
 
