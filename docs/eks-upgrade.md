@@ -1,8 +1,11 @@
 # EKS version upgrade runbook
 
 EKS upgrades the control plane **one minor version at a time**. Going from 1.33 to 1.36
-is three separate applies, not one. This branch therefore has one commit per hop, and you
-apply and verify each hop before moving to the next commit.
+is three separate applies, not one.
+
+There is no CI for this repo, so every apply is run by hand from a workstation. The branch
+carries one commit per hop so the history records what was applied and when; the PR goes up
+once all three hops are done and verified.
 
 ## Why now
 
@@ -17,6 +20,50 @@ apply and verify each hop before moving to the next commit.
 
 Stopping at 1.34 puts the cluster back on extended-support billing in December 2026, which
 is why the target is 1.36.
+
+## Before you start
+
+### Credentials
+
+`eks:*` is denied without MFA by the `DEV-FORCE-MFA` policy, so start from an MFA session.
+`kubectl` access additionally needs the `teehr-hub-teehr-hub-admin` role, which is the only
+access entry on the cluster — `enable_cluster_creator_admin_permissions` is commented out in
+`eks.tf`, so your own user has no cluster access of its own.
+
+```bash
+aws sts get-session-token --serial-number <mfa-arn> --token-code <code>
+aws eks update-kubeconfig --name teehr-hub --region us-east-2 \
+  --role-arn arn:aws:iam::<account>:role/teehr-hub-teehr-hub-admin
+```
+
+### Tooling
+
+| Tool | Needs | Note |
+| --- | --- | --- |
+| aws-cli | 2.24+ | 2.18.15 lacks `eks describe-cluster-versions`; the insight commands below do work on it |
+| terraform | 1.5+ | |
+| kubectl | within one minor of the control plane | see below |
+| helm | 3 or 4 | only needed for the cert-manager work, not for these hops |
+
+**kubectl skew matters here.** Kubernetes supports kubectl within ±1 minor of the API
+server. A 1.36 kubectl against the current 1.33 control plane is three minors ahead and
+outside that window, so it can misreport or fail on some resources. Either keep a 1.34
+kubectl for the early hops (`brew install kubernetes-cli@1.34`, or use `asdf`/`mise`) or
+treat anything odd it reports before hop 3 with suspicion.
+
+### State locking
+
+The S3 backend in `versions.tf` sets no `dynamodb_table` and no `use_lockfile`, so **there
+is no state locking**. Fine for a single operator, but make sure nobody else is applying
+while you work through the hops.
+
+### Pin the providers first
+
+`terraform init -upgrade` would move the AWS provider 6.53 -> 6.66, the Helm provider
+3.2 -> 3.3 and the EKS module 21.24 -> 21.26. Do that **once, up front, at 1.33**, verify a
+clean plan, and commit the updated `.terraform.lock.hcl`. Then use plain `terraform init`
+for the hops, so each hop's plan shows only the Kubernetes version change and not provider
+churn mixed in with it.
 
 ## Open risk: Contour
 
@@ -41,14 +88,26 @@ Check for a new release before starting:
 curl -s https://api.github.com/repos/projectcontour/contour/releases/latest | jq -r .tag_name
 ```
 
-## Commit order
+## Working through the hops locally
 
-| Commit | Apply target |
-| --- | --- |
-| `chore(deps): bump in-cluster components ahead of EKS upgrade` | still 1.33 — verify the new cluster-autoscaler, NTH and Contour on the current control plane |
-| `feat(eks): upgrade control plane to Kubernetes 1.34` | hop 1 |
-| `feat(eks): upgrade control plane to Kubernetes 1.35` | hop 2 — gated on Contour, see above |
-| `feat(eks): upgrade control plane to Kubernetes 1.36` | hop 3 |
+Stay on the branch and walk `cluster_version` in `teehr-hub.tfvars` forward one minor at a
+time, applying and verifying at each stop. The commits are already written in that order:
+
+| Stage | `cluster_version` | What it covers |
+| --- | --- | --- |
+| provider/module pin | 1.33 | `init -upgrade`, clean plan, commit the lock file |
+| `chore(deps)` | 1.33 | new cluster-autoscaler, NTH and Contour on the current control plane |
+| `feat(eks): ... 1.34` | 1.34 | hop 1 |
+| `feat(eks): ... 1.35` | 1.35 | hop 2 — gated on Contour, see above |
+| `feat(eks): ... 1.36` | 1.36 | hop 3 |
+
+To apply a stage, check out that commit (`git checkout <sha>`, detached) or reset the branch
+to it, apply, verify, then move to the next. Applying `chore(deps)` on its own first is
+deliberate: it proves the new cluster-autoscaler and Contour are healthy on 1.33 before the
+control plane starts moving, so a later failure has one obvious cause instead of two.
+
+If a hop needs a fix, commit it on the branch as you go. Open the PR once 1.36 is applied
+and verified, so the PR describes what actually happened rather than what was planned.
 
 `terraform/autoscaler.tf` selects the cluster-autoscaler image tag from
 `var.cluster_version`, so each hop pulls the matching CA release automatically. Adding a
@@ -83,17 +142,19 @@ control plane ENIs.
 ### 2. Apply
 
 ```bash
-git checkout <hop commit>
-terraform init -upgrade
-terraform plan -var-file=teehr-hub.tfvars
-terraform apply -var-file=teehr-hub.tfvars
+terraform init
+terraform plan -var-file=teehr-hub.tfvars -out=hop.tfplan
+terraform apply hop.tfplan
 ```
+
+Applying a saved plan rather than re-planning at apply time means what you reviewed is
+exactly what runs — worth it here because there is no CI diffing it for you. `*.tfplan` is
+gitignored.
 
 The control plane update takes several minutes and cannot be paused or stopped. If EKS's
 health checks fail it reverts on its own and the cluster stays on the prior version.
 
-The `terraform-aws-modules/eks` module is pinned `~> 21.0`, so `init -upgrade` picks up the
-newest 21.x. The EKS addons (coredns, kube-proxy, vpc-cni, ebs-csi, efs-csi) have no
+The EKS addons (coredns, kube-proxy, vpc-cni, ebs-csi, efs-csi) have no
 version pinned, so they resolve to the default for the new cluster version as part of the
 same apply.
 
