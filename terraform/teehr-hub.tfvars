@@ -4,7 +4,7 @@ cluster_name = "teehr-hub"
 
 cluster_nodes_location = "us-east-2a"
 
-cluster_version = "1.34"
+cluster_version = "1.35"
 
 environment = "dev"
 
