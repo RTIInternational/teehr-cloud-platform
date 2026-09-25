@@ -54,12 +54,23 @@ If it *is* set, stop — removing cert-manager would take the TLS Secrets with i
 
 Back up everything:
 
+**Write these outside the repository.** Both contain TLS private keys, and the working
+directory for this procedure is inside it:
+
 ```bash
+BACKUP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/cert-manager-backup.XXXXXX")
+chmod 700 "$BACKUP_DIR"
+echo "backups: $BACKUP_DIR"
+
 kubectl get clusterissuers,issuers,certificates,certificaterequests -A -o yaml \
-  > cert-manager-crs-backup.yaml
+  > "$BACKUP_DIR/cert-manager-crs-backup.yaml"
 kubectl get secrets -A -l controller.cert-manager.io/fao=true -o yaml \
-  > cert-manager-secrets-backup.yaml
+  > "$BACKUP_DIR/cert-manager-secrets-backup.yaml"
 ```
+
+`.gitignore` also covers `*-backup.yaml` as a backstop, but do not rely on it — keep the
+key material out of the tree in the first place, and delete the directory once the upgrade
+has verified.
 
 Check no certificate is close to expiry. Renewal is paused for the length of the window, so
 anything renewing in the next few days should be dealt with first:

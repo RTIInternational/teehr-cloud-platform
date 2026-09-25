@@ -25,3 +25,8 @@ terraform/*_override.tf.json
 # Local-only variable files
 terraform/*.tfvars.local
 terraform/*.auto.tfvars.local
+
+# Cluster resource backups - these contain TLS private keys, never commit them
+*-backup.yaml
+*-backup.yml
+secrets.txt
