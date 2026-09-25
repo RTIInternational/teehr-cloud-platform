@@ -17,8 +17,13 @@ resource "aws_efs_file_system" "datadir" {
   # credits pegged at maximum, so essentially nothing is being read and the
   # per-GB IA/Archive retrieval charges should be negligible.
   #
-  # Expected effect: ~$281/mo -> ~$10/mo. IA alone would reach ~$15/mo, so if
-  # the Archive transition ever has to be dropped, most of the saving remains.
+  # Expected effect: ~$281/mo -> ~$21-40/mo. That is well short of a naive
+  # storage-rate calculation because EFS meters IA and Archive with a 128 KiB
+  # minimum billable size per file, and this file system is dominated by tiny
+  # files: 1.07M of them are under 1 KiB. Measured against the real inventory,
+  # 279 GiB of cold data bills as 614 GiB once rounded -- a 2.2x inflation.
+  # Consolidating those small files (much of it fragmented Spark parquet
+  # output) would now save more than any further storage-class tuning.
   #
   # transition_to_primary_storage_class is deliberately NOT set. With
   # AFTER_1_ACCESS a single full-tree scan (a stray du or find) would drag
@@ -29,11 +34,22 @@ resource "aws_efs_file_system" "datadir" {
   # semantics, and metadata always stays in Standard so listings stay fast.
   # Transitions happen gradually and the policy is reversible.
   #
-  # NOTE: throughput_mode is "bursting", where baseline throughput scales with
-  # the amount of data in STANDARD (~50 KB/s per GiB). Moving the bulk to IA
-  # lowers that baseline proportionally. That is fine at current usage (5-9
-  # KB/s against a ~50 MB/s baseline), but if /data ever becomes a hot path,
-  # switch to Elastic throughput rather than reverting this policy.
+  # Elastic throughput, not the previous Bursting, for two reasons:
+  #
+  #  1. Archive requires it. PutLifecycleConfiguration rejects
+  #     TransitionToArchive outright on a Bursting file system.
+  #  2. Bursting baseline throughput scales with the data held in STANDARD
+  #     (~50 KB/s per GiB). Tiering ~920 GiB away would leave ~10 GiB in
+  #     Standard and collapse the baseline to roughly 0.5 MB/s, making /data
+  #     painful to use. Elastic decouples throughput from storage entirely.
+  #
+  # Elastic bills per byte moved ($0.03/GB read, $0.06/GB write) instead of a
+  # size-derived baseline. At measured volumes -- 22 GB read and 24.9 GB
+  # written over 30 days -- that is ~$2.15/mo. It also drops the IA storage
+  # rate from $0.025 to $0.016/GiB-mo. Note AWS enforces a cooldown between
+  # throughput mode changes, so this cannot be flipped back and forth freely.
+  throughput_mode = "elastic"
+
   lifecycle_policy {
     transition_to_ia = "AFTER_30_DAYS"
   }
