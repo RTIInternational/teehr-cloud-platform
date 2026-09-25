@@ -3,6 +3,23 @@ resource "aws_efs_file_system" "datadir" {
     Name = "hub-datadir"
   }
 
+  # PARKED 2026-09 -- do not enable until the storage cleanup lands.
+  #
+  # A cleanup pass was requested after this was written, and it invalidates
+  # the measurements below. Both inputs to the decision move: deleting cold
+  # data changes the age mix, and removing or consolidating small files
+  # changes the 128 KiB rounding penalty, which is currently the single
+  # biggest factor in what tiering would actually cost. Re-measure before
+  # uncommenting -- the /data inventory walk and the sizing script behind
+  # these numbers are described in RTIInternational/teehr-hub#422.
+  #
+  # Kept here rather than deleted so the analysis is not lost. Uncomment
+  # throughput_mode and both lifecycle_policy blocks together: Archive is
+  # rejected on a Bursting file system, and Elastic on its own would just add
+  # ~$2.15/mo of I/O billing for no benefit.
+  #
+  # ---------------------------------------------------------------------
+  #
   # Tier cold data off Standard.
   #
   # This file system held ~938 GiB with no lifecycle policy at all, so every
@@ -48,15 +65,15 @@ resource "aws_efs_file_system" "datadir" {
   # written over 30 days -- that is ~$2.15/mo. It also drops the IA storage
   # rate from $0.025 to $0.016/GiB-mo. Note AWS enforces a cooldown between
   # throughput mode changes, so this cannot be flipped back and forth freely.
-  throughput_mode = "elastic"
+  # throughput_mode = "elastic"
 
-  lifecycle_policy {
-    transition_to_ia = "AFTER_30_DAYS"
-  }
+  # lifecycle_policy {
+  #   transition_to_ia = "AFTER_30_DAYS"
+  # }
 
-  lifecycle_policy {
-    transition_to_archive = "AFTER_90_DAYS"
-  }
+  # lifecycle_policy {
+  #   transition_to_archive = "AFTER_90_DAYS"
+  # }
 
   lifecycle {
     # Additional safeguard against deleting the EFS
