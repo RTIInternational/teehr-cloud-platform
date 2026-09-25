@@ -441,6 +441,105 @@ module "eks" {
       }
     })
 
+    # Prefect driver node groups.
+    #
+    # Every Prefect flow used to request 4 CPU / 32Gi and pin to
+    # spark-r5-4xlarge, an on-demand 16 vCPU / 128 GiB instance. Measuring 166
+    # driver pods over 3 days (2026-09) showed that is wrong in both
+    # directions: most drivers peak well under 2 CPU / 10 GiB, while a handful
+    # running Spark in local mode peak at 5.5 CPU / 39 GiB.
+    #
+    # The expensive part was not the size but the duration. At least one
+    # driver is running 100% of the time -- the hourly
+    # ingest-nwps-rfc-streamflow-forecasts alone accounts for 59% of all driver
+    # pod-hours -- so a $1.008/hr on-demand 4xlarge was pinned around the clock
+    # to run a job needing ~1.2 cores. Average concurrency is 1.21 and only
+    # 18.7% of the time is a second driver running.
+    #
+    # These stay ON-DEMAND. Spark drivers are not resilient to losing their
+    # node mid-run, so spot is not an option for them the way it is for the
+    # executors in spark-r5-4xlarge-spot.
+    driver-r5-xlarge = merge(local.eks_node_group_defaults, {
+      name          = "driver-r5-xlarge"
+      iam_role_name = "${local.cluster_name}-driver-r5-xlarge"
+
+      # Default 80 GB root volume. These drivers either only coordinate a Spark
+      # cluster (no local shuffle) or run light local-mode work capped at 20Gi
+      # of memory, so they do not need the 300 GB the executor nodes carry.
+
+      min_size     = 0
+      max_size     = 20
+      desired_size = 0
+
+      instance_types = ["r5.xlarge"]
+      labels = {
+        "teehr-hub/nodegroup-name"         = "driver-r5-xlarge"
+        "node.kubernetes.io/instance-type" = "r5.xlarge"
+      }
+      taints = {
+        dedicated = {
+          key    = "teehr-hub/dedicated"
+          value  = "worker"
+          effect = "NO_SCHEDULE"
+        }
+        dedicated_alt = {
+          key    = "teehr-hub_dedicated"
+          value  = "worker"
+          effect = "NO_SCHEDULE"
+        }
+      }
+      tags = {
+        "k8s.io/cluster-autoscaler/enabled"                                                 = "true"
+        "k8s.io/cluster-autoscaler/${local.cluster_name}"                                   = "owned"
+        "k8s.io/cluster-autoscaler/node-template/label/teehr-hub/node-purpose/node-purpose" = "worker"
+        "k8s.io/cluster-autoscaler/node-template/taint/teehr-hub/dedicated"                 = "worker:NoSchedule"
+        "k8s.io/cluster-autoscaler/node-template/taint/teehr-hub_dedicated"                 = "worker:NoSchedule"
+        "teehr-hub/nodegroup-name"                                                          = "driver-r5-xlarge"
+        "Project"                                                                           = "TEEHR"
+      }
+    })
+
+    driver-r5-2xlarge = merge(local.eks_node_group_defaults, {
+      name          = "driver-r5-2xlarge"
+      iam_role_name = "${local.cluster_name}-driver-r5-2xlarge"
+
+      # Keeps the 300 GB volume the heavy drivers get today on
+      # spark-r5-4xlarge. These run Spark in local mode, so shuffle lands on
+      # this node's root disk rather than on executor nodes.
+      block_device_mappings = local.spark_executor_block_device_mappings
+
+      min_size     = 0
+      max_size     = 20
+      desired_size = 0
+
+      instance_types = ["r5.2xlarge"]
+      labels = {
+        "teehr-hub/nodegroup-name"         = "driver-r5-2xlarge"
+        "node.kubernetes.io/instance-type" = "r5.2xlarge"
+      }
+      taints = {
+        dedicated = {
+          key    = "teehr-hub/dedicated"
+          value  = "worker"
+          effect = "NO_SCHEDULE"
+        }
+        dedicated_alt = {
+          key    = "teehr-hub_dedicated"
+          value  = "worker"
+          effect = "NO_SCHEDULE"
+        }
+      }
+      tags = {
+        "k8s.io/cluster-autoscaler/enabled"                                                 = "true"
+        "k8s.io/cluster-autoscaler/${local.cluster_name}"                                   = "owned"
+        "k8s.io/cluster-autoscaler/node-template/label/teehr-hub/node-purpose/node-purpose" = "worker"
+        "k8s.io/cluster-autoscaler/node-template/taint/teehr-hub/dedicated"                 = "worker:NoSchedule"
+        "k8s.io/cluster-autoscaler/node-template/taint/teehr-hub_dedicated"                 = "worker:NoSchedule"
+        "teehr-hub/nodegroup-name"                                                          = "driver-r5-2xlarge"
+        "Project"                                                                           = "TEEHR"
+      }
+    })
+
     spark-r5-4xlarge-spot = merge(local.eks_node_group_defaults, {
       name          = "spark-r5-4xlarge-spot"
       iam_role_name = "${local.cluster_name}-spark-r5-4xlarge-spot"
