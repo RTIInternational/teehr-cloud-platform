@@ -287,9 +287,19 @@ module "eks" {
       name          = "core-a"
       iam_role_name = "${local.cluster_name}-core"
 
-      min_size     = 1
+      # min_size is 2, not 1, because the core services no longer fit on a
+      # single node. After the 2026-09 right-sizing their memory requests total
+      # ~31.5 GiB against ~30 GiB allocatable on one r5.xlarge, so dropping to
+      # one node would leave pods Pending until the autoscaler reacted. CPU
+      # requests (~4.5 cores of 7.84 across two nodes) are no longer the
+      # binding constraint they were when this group sat at four nodes.
+      #
+      # desired_size is only honoured at creation -- the EKS module ignores
+      # changes to it afterwards -- but it is kept >= min_size so a recreate
+      # cannot fail on desired < min.
+      min_size     = 2
       max_size     = 6
-      desired_size = 1
+      desired_size = 2
 
       instance_types = ["r5.xlarge"]
       labels = {
