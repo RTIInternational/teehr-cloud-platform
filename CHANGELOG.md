@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-09-24 (cert-manager)
+
+### Summary
+- Upgraded cert-manager from chart v1.12.0 to v1.21.2 via uninstall and re-install.
+
+### What Changed
+- `terraform/cert-manager.tf` pins chart v1.21.2 and replaces the deprecated `installCRDs` value with `crds.enabled` / `crds.keep`.
+- Added `docs/cert-manager-upgrade.md` with the procedure, pre-flight checks and rollback.
+
+### Why
+- cert-manager does not support jumping minor versions, and v1.12.0 (May 2023) predates Kubernetes 1.28, so it is well outside its tested range on the upgraded control plane. v1.21 is tested on Kubernetes 1.33 through 1.36.
+- The v1.12 chart renders its CRDs without `helm.sh/resource-policy: keep`; `crds.keep` prevents a future uninstall from deleting every Certificate in the cluster.
+
 ## 2026-09-24
 
 ### Summary

@@ -203,7 +203,7 @@ Scale the offending Deployment to two replicas, or relax the PDB, and the drain 
 Watch for node groups stuck on a stale version:
 
 ```bash
-kubectl get nodes -o custom-columns=NAME:.metadata.name,VERSION:.status.nodeInfo.kubeletVersion,NG:.metadata.labels.teehr-hub/nodegroup-name
+kubectl get nodes -o 'custom-columns=NAME:.metadata.name,VERSION:.status.nodeInfo.kubeletVersion,NG:.metadata.labels.teehr-hub/nodegroup-name'
 ```
 
 ### 4. Verify before the next hop
@@ -228,7 +228,7 @@ kubectl get nodes -o custom-columns=NAME:.metadata.name,VERSION:.status.nodeInfo
 
   ```bash
   for h in hub api auth prefect minio xpublish-api; do
-    printf '%-14s %s\n' "$h" "$(curl -s -o /dev/null -w '%{http_code}' "https://$h.<hostname>/")"
+    printf '%-14s %s\n' "$h" "$(curl -s -o /dev/null -w '%{http_code}' "https://$h.teehr.rtiamanzi.org/")"
   done
   ```
 

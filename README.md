@@ -43,6 +43,12 @@ EKS only moves one minor version at a time, and each hop needs its node groups r
 verified before the next one. The procedure, the current version support dates, and the
 per-version breaking changes are in [docs/eks-upgrade.md](docs/eks-upgrade.md).
 
+### Upgrading cert-manager
+
+cert-manager cannot be upgraded across multiple minor versions in place. The uninstall and
+re-install procedure, and the pre-flight checks that keep the TLS Secrets intact, are in
+[docs/cert-manager-upgrade.md](docs/cert-manager-upgrade.md).
+
 ### Migration Notes
 
 Historical migration details for cert-manager, Contour, and Cluster Autoscaler live in [docs/migration-notes.md](docs/migration-notes.md). Those import steps were only needed for the initial adoption of existing cluster resources, not for routine updates.
