@@ -17,7 +17,7 @@ every custom resource can be recreated from code.
 ## What survives and what does not
 
 **The TLS Secrets survive.** Envoy serves TLS straight from
-`hub.<hostname>-tls`, `api.<hostname>-tls` and so on, so ingress keeps serving with
+`hub.teehr.rtiamanzi.org-tls`, `api.teehr.rtiamanzi.org-tls` and so on, so ingress keeps serving with
 cert-manager completely absent. Only renewal stops. This is why the maintenance window is
 not user-facing.
 
@@ -171,7 +171,7 @@ Then confirm each hostname still serves a valid chain:
 ```bash
 for h in hub api auth prefect minio xpublish-api; do
   echo "== $h"
-  echo | openssl s_client -connect "$h.<hostname>:443" -servername "$h.<hostname>" 2>/dev/null \
+  echo | openssl s_client -connect "$h.teehr.rtiamanzi.org:443" -servername "$h.teehr.rtiamanzi.org" 2>/dev/null \
     | openssl x509 -noout -dates -issuer
 done
 ```
