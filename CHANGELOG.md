@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased (maintenance page)
+
+### Summary
+- Delegated `teehr.rtiamanzi.org` from Azure DNS to Route 53 and added a CloudFront/S3 maintenance page that a
+  `maintenance_mode` variable switches the app hosts to.
+
+### What Changed
+- `terraform/dns.tf`: Route 53 zone, `*.teehr` alias to the Envoy ELB (or CloudFront in maintenance mode), and
+  an always-on `status.teehr` alias.
+- `terraform/maintenance.tf` + `terraform/maintenance/`: S3 bucket, us-east-1 wildcard ACM cert, CloudFront
+  distribution and functions that return 503 (HTML for browsers, JSON for API clients), and a `status.json`
+  for app banners.
+- Added `docs/maintenance-page.md` with the two-step apply, Azure delegation and maintenance runbook.
+
+### Why
+- The cluster serves its own ingress and TLS, so nothing could tell users about planned outages, including the
+  upcoming us-east-2 -> us-east-1 move (RTIInternational/teehr-hub#460).
+
 ## 2026-09-24 (cert-manager)
 
 ### Summary
