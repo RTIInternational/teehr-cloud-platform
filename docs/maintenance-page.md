@@ -53,20 +53,20 @@ record and restore the `*.teehr` CNAME to the ELB hostname.
 Both steps touch only the wildcard record and `status.json`:
 
 ```bash
-T="-target=aws_route53_record.wildcard -target=aws_s3_object.maintenance_status"
+T=(-target=aws_route53_record.wildcard -target=aws_s3_object.maintenance_status)
 ```
 
 1. Ahead of time, announce it:
 
    ```bash
-   terraform apply -var-file=teehr-hub.tfvars $T \
+   terraform apply -var-file=teehr-hub.tfvars "${T[@]}" \
      -var 'maintenance_message=TEEHR will be down for maintenance Sat Nov 1, 9am–5pm ET.'
    ```
 
 2. At the start of the window, turn on maintenance mode. The alias TTL is 60s:
 
    ```bash
-   terraform apply -var-file=teehr-hub.tfvars $T -var maintenance_mode=true \
+   terraform apply -var-file=teehr-hub.tfvars "${T[@]}" -var maintenance_mode=true \
      -var 'maintenance_message=...'
    ```
 
@@ -77,7 +77,7 @@ T="-target=aws_route53_record.wildcard -target=aws_s3_object.maintenance_status"
    curl --resolve hub.teehr.rtiamanzi.org:443:$(dig +short $ELB | head -1) https://hub.teehr.rtiamanzi.org/
    ```
 
-4. Turn it off with `terraform apply -var-file=teehr-hub.tfvars $T`, without the `-var` overrides.
+4. Turn it off with `terraform apply -var-file=teehr-hub.tfvars "${T[@]}"`, without the `-var` overrides.
 
 cert-manager HTTP-01 renewals fail while maintenance mode is on. That's harmless for short windows, since
 certificates renew 30 days before expiry.
