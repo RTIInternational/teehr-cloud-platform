@@ -25,7 +25,15 @@ locals {
     zone_id = aws_cloudfront_distribution.maintenance.hosted_zone_id
   }
 
-  ingress_target = var.maintenance_mode ? local.maintenance_target : local.envoy_target
+  # Alias to the status record by name rather than to CloudFront, so the
+  # wildcard has no dependency on the distribution (and its ACM validation)
+  # and can be applied before the Azure delegation exists.
+  status_target = {
+    name    = "status.${var.dns_zone_name}"
+    zone_id = aws_route53_zone.teehr.zone_id
+  }
+
+  ingress_target = var.maintenance_mode ? local.status_target : local.envoy_target
 }
 
 # Every app host (hub, api, dashboards, ...) resolves through this wildcard,
