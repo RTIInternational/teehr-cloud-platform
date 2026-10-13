@@ -10,6 +10,20 @@ provider "aws" {
   }
 }
 
+# CloudFront only accepts ACM certificates issued in us-east-1.
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+
+  default_tags {
+    tags = {
+      Project      = "TEEHR"
+      Environment  = var.environment
+      Cluster_Name = var.cluster_name
+    }
+  }
+}
+
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)

@@ -40,6 +40,32 @@ variable "project_name" {
   EOT
 }
 
+variable "dns_zone_name" {
+  type        = string
+  default     = "teehr.rtiamanzi.org"
+  description = <<-EOT
+  Route 53 hosted zone delegated from the rtiamanzi.org zone in Azure DNS.
+  EOT
+}
+
+variable "maintenance_mode" {
+  type        = bool
+  default     = false
+  description = <<-EOT
+  When true, *.<dns_zone_name> points at the CloudFront maintenance page instead
+  of the Envoy load balancer.
+  EOT
+}
+
+variable "maintenance_message" {
+  type        = string
+  default     = ""
+  description = <<-EOT
+  Message published in status.json, shown on the maintenance page and as a
+  banner in the apps. Set it ahead of planned maintenance; empty means no banner.
+  EOT
+}
+
 variable "project_ids" {
   type        = list(string)
   default     = []
