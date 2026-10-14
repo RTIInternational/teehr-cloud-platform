@@ -120,8 +120,26 @@ data "aws_cloudfront_cache_policy" "caching_disabled" {
   name = "Managed-CachingDisabled"
 }
 
-data "aws_cloudfront_response_headers_policy" "simple_cors" {
-  name = "Managed-SimpleCORS"
+# Managed-SimpleCORS omits Access-Control-Allow-Origin when the request carries
+# any non-safelisted header, e.g. the Pragma/Cache-Control that browsers add to
+# fetch(..., { cache: "no-store" }), so allow all request headers.
+resource "aws_cloudfront_response_headers_policy" "status_cors" {
+  name = "${var.environment}-${var.project_name}-status-cors"
+
+  cors_config {
+    access_control_allow_credentials = false
+    origin_override                  = true
+
+    access_control_allow_headers {
+      items = ["*"]
+    }
+    access_control_allow_methods {
+      items = ["GET", "HEAD", "OPTIONS"]
+    }
+    access_control_allow_origins {
+      items = ["*"]
+    }
+  }
 }
 
 resource "aws_cloudfront_distribution" "maintenance" {
@@ -147,7 +165,7 @@ resource "aws_cloudfront_distribution" "maintenance" {
     allowed_methods            = ["GET", "HEAD", "OPTIONS"]
     cached_methods             = ["GET", "HEAD"]
     cache_policy_id            = data.aws_cloudfront_cache_policy.caching_disabled.id
-    response_headers_policy_id = data.aws_cloudfront_response_headers_policy.simple_cors.id
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.status_cors.id
   }
 
   default_cache_behavior {
