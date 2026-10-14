@@ -23,7 +23,7 @@ data "aws_iam_policy_document" "polaris_trust_policy" {
 }
 
 resource "aws_iam_role" "polaris_irsa" {
-  name               = "teehr-hub-polaris-irsa"
+  name               = "${local.cluster_name}-polaris-irsa"
   assume_role_policy = data.aws_iam_policy_document.polaris_trust_policy.json
   tags = {
     "teehr-hub/role" = "polaris"
@@ -39,7 +39,7 @@ data "aws_iam_policy_document" "polaris_assume_warehouse_role" {
 }
 
 resource "aws_iam_policy" "polaris_assume_warehouse_role" {
-  name   = "teehr-hub-polaris-assume-warehouse-role"
+  name   = "${local.cluster_name}-polaris-assume-warehouse-role"
   policy = data.aws_iam_policy_document.polaris_assume_warehouse_role.json
 }
 

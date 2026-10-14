@@ -1,8 +1,8 @@
 resource "aws_s3_bucket" "teehr_iceberg_warehouse" {
-  bucket = "${var.environment}-${var.project_name}-iceberg-warehouse"
+  bucket = var.iceberg_warehouse_bucket
 
   tags = {
-    Name        = "${var.environment}-${var.project_name}-iceberg-warehouse"
+    Name        = var.iceberg_warehouse_bucket
     Environment = var.environment
     Project     = var.project_name
   }
@@ -20,10 +20,10 @@ resource "aws_s3_bucket_public_access_block" "teehr_iceberg_warehouse_public_acc
 }
 
 resource "aws_s3_bucket" "teehr_icechunk_warehouse" {
-  bucket = "${var.environment}-${var.project_name}-icechunk-warehouse"
+  bucket = var.icechunk_warehouse_bucket
 
   tags = {
-    Name        = "${var.environment}-${var.project_name}-icechunk-warehouse"
+    Name        = var.icechunk_warehouse_bucket
     Environment = var.environment
     Project     = var.project_name
   }

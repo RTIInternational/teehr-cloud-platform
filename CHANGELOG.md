@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased (parallel regional stacks)
+
+### Summary
+- Split account-wide resources into a separate `terraform/global/` root and made the regional root reusable for
+  a second stack, ahead of the us-east-2 -> us-east-1 move (RTIInternational/teehr-hub#462). No resources are
+  created, replaced or renamed in us-east-2.
+
+### What Changed
+- `terraform/global/`: admin and CI IAM, Route 53, CloudFront/ACM and the maintenance bucket, adopted with
+  `import` blocks (`removed` blocks in `terraform/removed.tf` drop them from the regional state). The wildcard
+  record now takes the Envoy ELB from `ingress_elb_hostname`/`ingress_elb_region` variables.
+- Regional state is selected with `-backend-config=backends/<stack>.hcl`; both roots use S3 state locking.
+- IAM names are prefixed with `cluster_name`; `legacy_iam_names` keeps the original unprefixed names for
+  us-east-2. Warehouse bucket names and `azs` are variables; removed the unused `cluster_nodes_location`.
+- New `ingress_elb_hostname` output on the regional root.
+
+### Why
+- IAM and S3 names are account- or globally-unique, so a second regional stack can't reuse them, and tearing down
+  us-east-2 must not take DNS or CI with it.
+
 ## Unreleased (maintenance page)
 
 ### Summary

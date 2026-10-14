@@ -50,7 +50,7 @@ resource "aws_iam_policy" "cluster_autoscaler_policy" {
 
 # 2. IAM role for Cluster Autoscaler
 resource "aws_iam_role" "cluster_autoscaler_irsa" {
-  name               = "ClusterAutoscalerIRSA"
+  name               = var.legacy_iam_names ? "ClusterAutoscalerIRSA" : "${local.cluster_name}-cluster-autoscaler-irsa"
   assume_role_policy = data.aws_iam_policy_document.cluster_autoscaler_trust_policy.json
   tags               = local.tags
 }

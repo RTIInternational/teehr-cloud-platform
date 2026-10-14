@@ -14,16 +14,36 @@ Or set a profile
 export AWS_PROFILE=ciroh_mdenno
 ```
 
-State backend configuration is defined in [terraform/versions.tf](terraform/versions.tf) and currently points to the shared state bucket `teehr-terraform-state` in `us-east-2`.
+There are two kinds of Terraform root, each with its own state in the `teehr-terraform-state` bucket (us-east-2):
+
+- [terraform/global/](terraform/global/): account-wide resources shared by every cluster: admin and CI IAM, the
+  Route 53 zone, and the CloudFront maintenance page. Nothing here depends on a cluster.
+- [terraform/](terraform/): one regional stack (VPC, EKS, EFS, S3 warehouse buckets, IRSA roles, ECR, in-cluster
+  platform components). Each stack has a backend file in [terraform/backends/](terraform/backends/) and a
+  tfvars file; `teehr-hub.tfvars` with `backends/use2.hcl` is the us-east-2 stack.
 
 ### Day-to-Day Commands
 
+Regional stack:
+
 ```bash
 cd terraform
-terraform init
+terraform init -reconfigure -backend-config=backends/use2.hcl
 terraform plan -var-file=teehr-hub.tfvars
 terraform apply -var-file=teehr-hub.tfvars
 ```
+
+Global resources (see [docs/maintenance-page.md](docs/maintenance-page.md) before applying; a plain apply clears
+any banner message):
+
+```bash
+cd terraform/global
+terraform init
+terraform plan -var-file=teehr-hub.tfvars
+```
+
+The EKS module tracks the latest node AMIs and add-on versions, so an untargeted regional apply usually also rolls
+every node group. Use `-target` unless that's intended.
 
 ### Post-Apply Checklist
 
@@ -34,7 +54,8 @@ terraform output
 ```
 
 1. Verify target resources exist in AWS (EKS cluster, IAM roles, S3 bucket, and ECR repositories).
-2. Record key output values needed by app deployment workflows.
+2. Record key output values needed by app deployment workflows. After creating or replacing a regional stack's
+   load balancer, copy its `ingress_elb_hostname` output into `terraform/global/teehr-hub.tfvars`.
 3. Re-run `terraform plan -var-file=teehr-hub.tfvars` and confirm it reports no pending changes.
 
 ### Upgrading the EKS version

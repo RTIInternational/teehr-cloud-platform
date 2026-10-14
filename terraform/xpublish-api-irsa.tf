@@ -31,7 +31,7 @@ data "aws_iam_policy_document" "xpublish_api_trust_policy" {
 }
 
 resource "aws_iam_role" "xpublish_api_irsa" {
-  name               = "teehr-hub-xpublish-api-irsa"
+  name               = "${local.cluster_name}-xpublish-api-irsa"
   assume_role_policy = data.aws_iam_policy_document.xpublish_api_trust_policy.json
   tags = {
     "teehr-hub/role" = "xpublish-api"

@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.0"
+  required_version = ">= 1.10"
 
   required_providers {
     aws = {
@@ -17,9 +17,6 @@ terraform {
     }
   }
 
-  backend "s3" {
-    bucket = "teehr-terraform-state"
-    key    = "terraform/state"
-    region = "us-east-2"
-  }
+  # One state per regional stack: terraform init -backend-config=backends/<stack>.hcl
+  backend "s3" {}
 }

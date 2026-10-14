@@ -2,28 +2,8 @@ output "nfs_server_dns" {
   value = aws_efs_file_system.datadir.dns_name
 }
 
-output "teehr_zone_name_servers" {
-  value       = aws_route53_zone.teehr.name_servers
-  description = "Name servers to add as the teehr NS record in the rtiamanzi.org Azure DNS zone"
-}
-
-output "maintenance_cloudfront_domain" {
-  value       = aws_cloudfront_distribution.maintenance.domain_name
-  description = "CloudFront domain serving the maintenance page and status.json"
-}
-
 output "cluster_arn" {
   value = module.eks.cluster_arn
-}
-
-output "github_actions_role_arn" {
-  value       = aws_iam_role.github_actions_garden_deploy.arn
-  description = "ARN of the GitHub Actions role for Garden deployments"
-}
-
-output "github_actions_role_name" {
-  value       = aws_iam_role.github_actions_garden_deploy.name
-  description = "Name of the GitHub Actions role for Garden deployments"
 }
 
 output "s3_vpc_endpoint_id" {

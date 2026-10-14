@@ -22,7 +22,7 @@ data "aws_iam_policy_document" "icechunk_s3_warehouse_rw" {
 }
 
 resource "aws_iam_policy" "icechunk_s3_warehouse_rw" {
-  name   = "teehr-hub-icechunk-s3-warehouse-rw"
+  name   = "${local.cluster_name}-icechunk-s3-warehouse-rw"
   policy = data.aws_iam_policy_document.icechunk_s3_warehouse_rw.json
 }
 
@@ -41,6 +41,6 @@ data "aws_iam_policy_document" "icechunk_s3_warehouse_readonly" {
 }
 
 resource "aws_iam_policy" "icechunk_s3_warehouse_readonly" {
-  name   = "teehr-hub-icechunk-s3-warehouse-readonly"
+  name   = "${local.cluster_name}-icechunk-s3-warehouse-readonly"
   policy = data.aws_iam_policy_document.icechunk_s3_warehouse_readonly.json
 }

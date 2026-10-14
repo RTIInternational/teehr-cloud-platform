@@ -4,20 +4,16 @@ resource "aws_route53_zone" "teehr" {
   name = var.dns_zone_name
 }
 
-# The Classic ELB created by the Envoy LoadBalancer Service in contour.yaml.
-data "kubernetes_service_v1" "envoy" {
-  metadata {
-    name      = "envoy"
-    namespace = "projectcontour"
-  }
+# The Envoy load balancer belongs to a regional stack, so it comes in as
+# variables; pointing them at another stack's ELB is the DNS cutover.
+data "aws_elb_hosted_zone_id" "ingress" {
+  region = var.ingress_elb_region
 }
-
-data "aws_elb_hosted_zone_id" "current" {}
 
 locals {
   envoy_target = {
-    name    = data.kubernetes_service_v1.envoy.status[0].load_balancer[0].ingress[0].hostname
-    zone_id = data.aws_elb_hosted_zone_id.current.id
+    name    = var.ingress_elb_hostname
+    zone_id = data.aws_elb_hosted_zone_id.ingress.id
   }
 
   maintenance_target = {
