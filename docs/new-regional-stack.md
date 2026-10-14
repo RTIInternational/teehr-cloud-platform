@@ -21,6 +21,7 @@ The kubernetes/helm resources can't plan until the cluster exists, so the first 
 else. Expect about 20 minutes for the cluster and node groups:
 
 ```bash
+export AWS_PROFILE=ciroh_mdenno   # the teehr-hub account (935462133478)
 cd terraform
 terraform init -reconfigure -backend-config=backends/use1.hcl
 
@@ -52,8 +53,11 @@ CONTEXT=arn:aws:eks:us-east-1:935462133478:cluster/teehr-hub-use1
 # cert-manager namespace and Contour CRDs, which Terraform doesn't own
 CONTEXT=$CONTEXT ../scripts/bootstrap-cluster-extras.sh pre
 
-# Everything else: cert-manager, Contour, cluster-autoscaler, node termination handler.
-# Untargeted is fine on a new stack; its nodes are already on the latest AMI.
+# cert-manager first: the ClusterIssuer in manifests/cert-manager.yaml can't plan
+# until the chart has installed cert-manager's CRDs.
+terraform apply -var-file=teehr-hub-use1.tfvars -target=helm_release.cert_manager
+
+# Everything else: ClusterIssuer, Contour, cluster-autoscaler, node termination handler.
 terraform apply -var-file=teehr-hub-use1.tfvars
 
 # Contour certgen Job (needs the namespace and RBAC from the apply above)
@@ -61,7 +65,7 @@ CONTEXT=$CONTEXT ../scripts/bootstrap-cluster-extras.sh post
 ```
 
 The Envoy Service creates its load balancer during this apply. If `terraform output ingress_elb_hostname` is
-null, wait a minute and run `terraform refresh -var-file=teehr-hub-use1.tfvars`.
+null, wait a minute and run `terraform apply -refresh-only -var-file=teehr-hub-use1.tfvars`.
 
 Check:
 
