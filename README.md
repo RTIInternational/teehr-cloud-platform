@@ -42,8 +42,8 @@ terraform init
 terraform plan -var-file=teehr-hub.tfvars
 ```
 
-The EKS module tracks the latest node AMIs and add-on versions, so an untargeted regional apply usually also rolls
-every node group. Use `-target` unless that's intended.
+The EKS module tracks the latest node AMIs and add-on versions, so a regional apply usually also rolls every node
+group to the latest AMI. That's routine but slow; use `-target` when you only want a quick, scoped change.
 
 ### Post-Apply Checklist
 
