@@ -24,6 +24,6 @@ data "aws_iam_policy_document" "iceberg_s3_warehouse_rw" {
 }
 
 resource "aws_iam_policy" "iceberg_s3_warehouse_rw" {
-  name   = "teehr-hub-iceberg-s3-warehouse-rw"
+  name   = "${local.cluster_name}-iceberg-s3-warehouse-rw"
   policy = data.aws_iam_policy_document.iceberg_s3_warehouse_rw.json
 }

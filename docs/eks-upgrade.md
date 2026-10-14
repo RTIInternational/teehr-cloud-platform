@@ -53,9 +53,9 @@ treat anything odd it reports before hop 3 with suspicion.
 
 ### State locking
 
-The S3 backend in `versions.tf` sets no `dynamodb_table` and no `use_lockfile`, so **there
-is no state locking**. Fine for a single operator, but make sure nobody else is applying
-while you work through the hops.
+Each stack's backend file (`backends/*.hcl`) sets `use_lockfile`, so Terraform takes an S3
+lock while it runs. A stale lock from an interrupted run is cleared with
+`terraform force-unlock <id>`.
 
 ### Pin the providers first
 
@@ -159,7 +159,7 @@ control plane ENIs.
 ### 2. Apply
 
 ```bash
-terraform init
+terraform init -reconfigure -backend-config=backends/use2.hcl
 terraform plan -var-file=teehr-hub.tfvars -out=hop.tfplan
 terraform apply hop.tfplan
 ```

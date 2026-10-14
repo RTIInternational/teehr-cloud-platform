@@ -24,7 +24,7 @@ data "aws_iam_policy_document" "iceberg_s3_warehouse_readonly_trust_policy" {
 }
 
 resource "aws_iam_role" "iceberg_s3_warehouse_readonly_irsa" {
-  name               = "teehr-hub-iceberg-s3-warehouse-readonly-irsa"
+  name               = "${local.cluster_name}-iceberg-s3-warehouse-readonly-irsa"
   assume_role_policy = data.aws_iam_policy_document.iceberg_s3_warehouse_readonly_trust_policy.json
   tags = {
     "teehr-hub/role" = "jupyter-external-data-readonly"
@@ -46,7 +46,7 @@ data "aws_iam_policy_document" "iceberg_s3_warehouse_readonly" {
 }
 
 resource "aws_iam_policy" "iceberg_s3_warehouse_readonly" {
-  name   = "teehr-hub-iceberg-s3-warehouse-readonly"
+  name   = "${local.cluster_name}-iceberg-s3-warehouse-readonly"
   policy = data.aws_iam_policy_document.iceberg_s3_warehouse_readonly.json
 }
 

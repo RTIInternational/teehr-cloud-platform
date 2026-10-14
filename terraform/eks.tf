@@ -194,6 +194,11 @@ locals {
 }
 
 
+# Managed in global/ and shared by every regional cluster.
+data "aws_iam_role" "teehr_hub_admin" {
+  name = var.admin_role_name
+}
+
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 21.0"
@@ -216,7 +221,7 @@ module "eks" {
 
   access_entries = {
     admin = {
-      principal_arn = aws_iam_role.teehr_hub_admin.arn
+      principal_arn = data.aws_iam_role.teehr_hub_admin.arn
       type          = "STANDARD"
       policy_associations = {
         admin_policy = {

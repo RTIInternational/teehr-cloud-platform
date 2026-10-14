@@ -1,12 +1,12 @@
 # Terraform local working directory
-terraform/.terraform/
+terraform/**/.terraform/
 
 # Terraform state files
-terraform/*.tfstate
-terraform/*.tfstate.*
+terraform/**/*.tfstate
+terraform/**/*.tfstate.*
 
 # Terraform plan files
-terraform/*.tfplan
+terraform/**/*.tfplan
 
 # Crash logs
 terraform/crash.log

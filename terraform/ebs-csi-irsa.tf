@@ -21,7 +21,7 @@ data "aws_iam_policy_document" "ebs_csi_trust_policy" {
 
 # 2. IAM role for EBS CSI driver
 resource "aws_iam_role" "ebs_csi_irsa" {
-  name               = "AmazonEKS_EBS_CSI_DriverRole"
+  name               = var.legacy_iam_names ? "AmazonEKS_EBS_CSI_DriverRole" : "${local.cluster_name}-ebs-csi-driver-irsa"
   assume_role_policy = data.aws_iam_policy_document.ebs_csi_trust_policy.json
   tags               = local.tags
 }

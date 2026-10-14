@@ -2,13 +2,17 @@ region = "us-east-2"
 
 cluster_name = "teehr-hub"
 
-cluster_nodes_location = "us-east-2a"
-
 cluster_version = "1.36"
 
 environment = "dev"
 
 project_name = "teehr"
+
+iceberg_warehouse_bucket  = "dev-teehr-iceberg-warehouse"
+icechunk_warehouse_bucket = "dev-teehr-icechunk-warehouse"
+
+# IAM names predate the per-cluster prefixes; drop with this stack.
+legacy_iam_names = true
 
 # CIROH project IDs for dedicated node groups
 # Each project ID will create: nb-r5-xlarge-{id}, nb-r5-4xlarge-{id}, spark-r5-4xlarge-spot-{id}

@@ -1,19 +1,22 @@
 # Maintenance page
 
-`teehr.rtiamanzi.org` is delegated from Azure DNS to a Route 53 zone (`terraform/dns.tf`). Every app host
+`teehr.rtiamanzi.org` is delegated from Azure DNS to a Route 53 zone (`terraform/global/dns.tf`). Every app host
 resolves through a `*.teehr.rtiamanzi.org` alias that points either at the Envoy ELB or, when
 `maintenance_mode = true`, at a CloudFront distribution serving a static page from S3
-(`terraform/maintenance.tf`). None of this runs in the cluster.
+(`terraform/global/maintenance.tf`). None of this runs in the cluster.
 
 - Browsers get the page with HTTP 503. API clients (anything not sending `Accept: text/html`) get a JSON 503.
 - `https://status.teehr.rtiamanzi.org` always serves from CloudFront and returns 200.
 - `https://status.teehr.rtiamanzi.org/status.json` is `{"maintenance": bool, "message": str}`, CORS-enabled, for
   app banners.
 
-**Always use `-target` for these resources.** The EKS module tracks the latest node AMIs and add-on versions, so
-an untargeted apply usually also rolls every node group.
+All commands here run in `terraform/global`, which holds only these account-wide resources, so `-target` isn't
+needed. **Every apply there sets `status.json` from `-var maintenance_message`**: while a banner is up, pass the
+current message on every apply, or the banner clears.
 
 ## One-time setup
+
+This was done before the resources moved from `terraform/` to `terraform/global/`; it's kept for reference.
 
 The ACM certificate can't validate until the delegation is live, so apply in two steps.
 
@@ -50,23 +53,17 @@ record and restore the `*.teehr` CNAME to the ELB hostname.
 
 ## Planned maintenance
 
-Both steps touch only the wildcard record and `status.json`:
-
-```bash
-T=(-target=aws_route53_record.wildcard -target=aws_s3_object.maintenance_status)
-```
-
 1. Ahead of time, announce it:
 
    ```bash
-   terraform apply -var-file=teehr-hub.tfvars "${T[@]}" \
+   terraform apply -var-file=teehr-hub.tfvars \
      -var 'maintenance_message=TEEHR will be down for maintenance Sat Nov 1, 9am–5pm ET.'
    ```
 
 2. At the start of the window, turn on maintenance mode. The alias TTL is 60s:
 
    ```bash
-   terraform apply -var-file=teehr-hub.tfvars "${T[@]}" -var maintenance_mode=true \
+   terraform apply -var-file=teehr-hub.tfvars -var maintenance_mode=true \
      -var 'maintenance_message=...'
    ```
 
@@ -77,13 +74,13 @@ T=(-target=aws_route53_record.wildcard -target=aws_s3_object.maintenance_status)
    curl --resolve hub.teehr.rtiamanzi.org:443:$(dig +short $ELB | head -1) https://hub.teehr.rtiamanzi.org/
    ```
 
-4. Turn it off with `terraform apply -var-file=teehr-hub.tfvars "${T[@]}"`, without the `-var` overrides.
+4. Turn it off with `terraform apply -var-file=teehr-hub.tfvars`, without the `-var` overrides.
 
 cert-manager HTTP-01 renewals fail while maintenance mode is on. That's harmless for short windows, since
 certificates renew 30 days before expiry.
 
 ## Region move
 
-The wildcard alias reads the ELB hostname from the `projectcontour/envoy` Service, so pointing DNS at a new
-cluster is a `terraform apply` against it. CloudFront, ACM and Route 53 are global. The maintenance bucket
-lives in the provider region, so it moves with the rest of the stack.
+The wildcard alias points at `ingress_elb_hostname` / `ingress_elb_region` in `terraform/global/teehr-hub.tfvars`.
+To move DNS to another regional stack, set them from that stack's `ingress_elb_hostname` output and apply in
+`terraform/global`. The maintenance bucket stays in us-east-2; it doesn't depend on any cluster.

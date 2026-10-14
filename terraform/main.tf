@@ -10,20 +10,6 @@ provider "aws" {
   }
 }
 
-# CloudFront only accepts ACM certificates issued in us-east-1.
-provider "aws" {
-  alias  = "us_east_1"
-  region = "us-east-1"
-
-  default_tags {
-    tags = {
-      Project      = "TEEHR"
-      Environment  = var.environment
-      Cluster_Name = var.cluster_name
-    }
-  }
-}
-
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
@@ -55,7 +41,8 @@ data "aws_availability_zones" "available" {}
 locals {
   cluster_name = var.cluster_name
   vpc_cidr     = "10.0.0.0/16"
-  azs          = slice(data.aws_availability_zones.available.names, 0, 3)
+  # Node groups and the EFS mount target sit in the first AZ.
+  azs = coalesce(var.azs, slice(data.aws_availability_zones.available.names, 0, 3))
 
   tags = {
     "teehr-hub-cluster-name" = var.cluster_name

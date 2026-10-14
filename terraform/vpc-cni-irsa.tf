@@ -17,7 +17,7 @@ data "aws_iam_policy_document" "vpc_cni_trust_policy" {
 }
 
 resource "aws_iam_role" "vpc_cni_irsa" {
-  name               = "VPC_CNI_IRSA"
+  name               = var.legacy_iam_names ? "VPC_CNI_IRSA" : "${local.cluster_name}-vpc-cni-irsa"
   assume_role_policy = data.aws_iam_policy_document.vpc_cni_trust_policy.json
   tags               = local.tags
 }

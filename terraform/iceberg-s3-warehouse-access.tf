@@ -21,7 +21,7 @@ data "aws_iam_policy_document" "iceberg_s3_warehouse_trust_policy" {
 }
 
 resource "aws_iam_role" "iceberg_s3_warehouse_access" {
-  name               = "teehr-hub-iceberg-s3-warehouse-access"
+  name               = "${local.cluster_name}-iceberg-s3-warehouse-access"
   assume_role_policy = data.aws_iam_policy_document.iceberg_s3_warehouse_trust_policy.json
   tags = {
     "teehr-hub/role" = "iceberg-s3-warehouse"

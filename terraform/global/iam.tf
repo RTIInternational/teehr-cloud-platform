@@ -18,7 +18,7 @@ resource "aws_iam_group_policy" "teehr_hub_admins_assume_role" {
 }
 
 resource "aws_iam_role" "teehr_hub_admin" {
-  name = "${local.cluster_name}-teehr-hub-admin"
+  name = "${var.name}-teehr-hub-admin"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -52,7 +52,7 @@ resource "aws_iam_openid_connect_provider" "github_actions" {
 
 # IAM role for GitHub Actions to deploy with Garden
 resource "aws_iam_role" "github_actions_garden_deploy" {
-  name = "${local.cluster_name}-github-actions-garden-deploy"
+  name = "${var.name}-github-actions-garden-deploy"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"

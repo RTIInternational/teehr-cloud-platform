@@ -31,7 +31,7 @@ data "aws_iam_policy_document" "prefect_job_trust_policy" {
 }
 
 resource "aws_iam_role" "prefect_job_irsa" {
-  name               = "teehr-hub-prefect-job-irsa"
+  name               = "${local.cluster_name}-prefect-job-irsa"
   assume_role_policy = data.aws_iam_policy_document.prefect_job_trust_policy.json
   tags = {
     "teehr-hub/role" = "prefect-job"
