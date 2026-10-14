@@ -9,7 +9,8 @@
 
 ### What Changed
 - `terraform/global/`: admin and CI IAM, Route 53, CloudFront/ACM and the maintenance bucket, adopted with
-  `import` blocks (`removed` blocks in `terraform/removed.tf` drop them from the regional state). The wildcard
+  `import` blocks while `removed` blocks dropped them from the regional state; both were deleted after the
+  2026-10-14 apply. The wildcard
   record now takes the Envoy ELB from `ingress_elb_hostname`/`ingress_elb_region` variables.
 - Regional state is selected with `-backend-config=backends/<stack>.hcl`; both roots use S3 state locking.
 - IAM names are prefixed with `cluster_name`; `legacy_iam_names` keeps the original unprefixed names for
