@@ -66,3 +66,15 @@ variable "maintenance_message" {
   banner in the apps. Set it ahead of planned maintenance; empty means no banner.
   EOT
 }
+
+variable "staging_ingress" {
+  type = map(object({
+    elb_hostname = string
+    elb_region   = string
+  }))
+  default     = {}
+  description = <<-EOT
+  Extra stacks reachable before cutover, keyed by label: each gets
+  *.<label>.<dns_zone_name> pointing at its Envoy load balancer.
+  EOT
+}

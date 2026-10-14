@@ -209,8 +209,10 @@ module "eks" {
   endpoint_public_access = true
   authentication_mode    = "API_AND_CONFIG_MAP"
 
-  # Optional: Adds the current caller identity as an administrator via cluster access entry
-  # enable_cluster_creator_admin_permissions = true
+  # Grants whoever applies cluster admin, so Terraform's kubernetes/helm
+  # providers can reach a new cluster. The us-east-2 cluster has an equivalent
+  # access entry created outside Terraform, so it leaves this off.
+  enable_cluster_creator_admin_permissions = var.cluster_creator_admin
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets

@@ -58,6 +58,11 @@ terraform output
    load balancer, copy its `ingress_elb_hostname` output into `terraform/global/teehr-hub.tfvars`.
 3. Re-run `terraform plan -var-file=teehr-hub.tfvars` and confirm it reports no pending changes.
 
+### Building a new regional stack
+
+Building a second stack next to an existing one (e.g. for the us-east-1 move) is a staged apply plus a few
+in-cluster bootstrap steps; see [docs/new-regional-stack.md](docs/new-regional-stack.md).
+
 ### Upgrading the EKS version
 
 EKS only moves one minor version at a time, and each hop needs its node groups rolled and
