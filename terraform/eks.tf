@@ -241,12 +241,16 @@ module "eks" {
       resolve_conflicts_on_create = "OVERWRITE"
       resolve_conflicts_on_update = "OVERWRITE"
     }
+    # Nodes can't become Ready without these, and the module creates the
+    # cluster without EKS's default add-ons, so a new cluster's node groups fail
+    # unless they're installed first.
     kube-proxy = {
+      before_compute              = true
       resolve_conflicts_on_create = "OVERWRITE"
       resolve_conflicts_on_update = "OVERWRITE"
     }
     vpc-cni = {
-      # before_compute = true
+      before_compute = true
     }
     aws-ebs-csi-driver = {
       resolve_conflicts_on_create = "OVERWRITE"
@@ -590,4 +594,15 @@ module "eks" {
   }, local.all_project_node_groups)
 
   tags = local.tags
+}
+# kube-proxy and vpc-cni became before_compute add-ons, which the module tracks
+# under a different address. Rename in state rather than replace them.
+moved {
+  from = module.eks.aws_eks_addon.this["kube-proxy"]
+  to   = module.eks.aws_eks_addon.before_compute["kube-proxy"]
+}
+
+moved {
+  from = module.eks.aws_eks_addon.this["vpc-cni"]
+  to   = module.eks.aws_eks_addon.before_compute["vpc-cni"]
 }
