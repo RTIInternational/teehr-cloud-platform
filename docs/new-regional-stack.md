@@ -18,10 +18,11 @@ A stack is a backend file in `terraform/backends/` plus a tfvars file. The us-ea
 ## 1. AWS resources
 
 The kubernetes/helm resources can't plan until the cluster exists, so the first apply targets everything
-else. Expect about 20 minutes for the cluster and node groups:
+else. Expect about 20 minutes for the cluster and node groups. `ciroh_mdenno` is the profile for the teehr-hub
+account (935462133478). The code blocks have no comments, so they paste cleanly into zsh.
 
 ```bash
-export AWS_PROFILE=ciroh_mdenno   # the teehr-hub account (935462133478)
+export AWS_PROFILE=ciroh_mdenno
 cd terraform
 terraform init -reconfigure -backend-config=backends/use1.hcl
 
@@ -46,21 +47,21 @@ terraform apply -var-file=teehr-hub-use1.tfvars "${T[@]}"
 
 ## 2. In-cluster components
 
+In order:
+
+1. `bootstrap-cluster-extras.sh pre` creates the cert-manager namespace and the Contour CRDs, which Terraform
+   doesn't own.
+2. A targeted apply installs cert-manager. The ClusterIssuer in `manifests/cert-manager.yaml` can't plan until
+   the chart has installed cert-manager's CRDs.
+3. A full apply creates the rest: ClusterIssuer, Contour, cluster-autoscaler, node termination handler.
+4. `bootstrap-cluster-extras.sh post` runs the Contour certgen Job, which needs the namespace and RBAC from step 3.
+
 ```bash
 aws eks update-kubeconfig --name teehr-hub-use1 --region us-east-1
 CONTEXT=arn:aws:eks:us-east-1:935462133478:cluster/teehr-hub-use1
-
-# cert-manager namespace and Contour CRDs, which Terraform doesn't own
 CONTEXT=$CONTEXT ../scripts/bootstrap-cluster-extras.sh pre
-
-# cert-manager first: the ClusterIssuer in manifests/cert-manager.yaml can't plan
-# until the chart has installed cert-manager's CRDs.
 terraform apply -var-file=teehr-hub-use1.tfvars -target=helm_release.cert_manager
-
-# Everything else: ClusterIssuer, Contour, cluster-autoscaler, node termination handler.
 terraform apply -var-file=teehr-hub-use1.tfvars
-
-# Contour certgen Job (needs the namespace and RBAC from the apply above)
 CONTEXT=$CONTEXT ../scripts/bootstrap-cluster-extras.sh post
 ```
 
