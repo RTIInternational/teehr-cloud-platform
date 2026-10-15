@@ -42,8 +42,8 @@ terraform init
 terraform plan -var-file=teehr-hub.tfvars
 ```
 
-The EKS module tracks the latest node AMIs and add-on versions, so an untargeted regional apply usually also rolls
-every node group. Use `-target` unless that's intended.
+The EKS module tracks the latest node AMIs and add-on versions, so a regional apply usually also rolls every node
+group to the latest AMI. That's routine but slow; use `-target` when you only want a quick, scoped change.
 
 ### Post-Apply Checklist
 
@@ -57,6 +57,11 @@ terraform output
 2. Record key output values needed by app deployment workflows. After creating or replacing a regional stack's
    load balancer, copy its `ingress_elb_hostname` output into `terraform/global/teehr-hub.tfvars`.
 3. Re-run `terraform plan -var-file=teehr-hub.tfvars` and confirm it reports no pending changes.
+
+### Building a new regional stack
+
+Building a second stack next to an existing one (e.g. for the us-east-1 move) is a staged apply plus a few
+in-cluster bootstrap steps; see [docs/new-regional-stack.md](docs/new-regional-stack.md).
 
 ### Upgrading the EKS version
 

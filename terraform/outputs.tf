@@ -40,3 +40,8 @@ output "icechunk_warehouse_bucket" {
   value       = aws_s3_bucket.teehr_icechunk_warehouse.bucket
   description = "Name of the icechunk warehouse bucket backing the gridded-data (xpublish-api) stack"
 }
+
+output "ecr_registry" {
+  value       = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.region}.amazonaws.com"
+  description = "ECR registry host for this stack's images"
+}

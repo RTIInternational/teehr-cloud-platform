@@ -59,3 +59,23 @@ resource "aws_route53_record" "status" {
     evaluate_target_health = false
   }
 }
+
+# Lets a new regional stack be tested on its own hostnames before the main
+# wildcard is moved to it.
+data "aws_elb_hosted_zone_id" "staging" {
+  for_each = var.staging_ingress
+  region   = each.value.elb_region
+}
+
+resource "aws_route53_record" "staging" {
+  for_each = var.staging_ingress
+  zone_id  = aws_route53_zone.teehr.zone_id
+  name     = "*.${each.key}.${var.dns_zone_name}"
+  type     = "A"
+
+  alias {
+    name                   = each.value.elb_hostname
+    zone_id                = data.aws_elb_hosted_zone_id.staging[each.key].id
+    evaluate_target_health = false
+  }
+}

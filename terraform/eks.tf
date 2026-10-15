@@ -209,8 +209,10 @@ module "eks" {
   endpoint_public_access = true
   authentication_mode    = "API_AND_CONFIG_MAP"
 
-  # Optional: Adds the current caller identity as an administrator via cluster access entry
-  # enable_cluster_creator_admin_permissions = true
+  # Grants whoever applies cluster admin, so Terraform's kubernetes/helm
+  # providers can reach a new cluster. The us-east-2 cluster has an equivalent
+  # access entry created outside Terraform, so it leaves this off.
+  enable_cluster_creator_admin_permissions = var.cluster_creator_admin
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
@@ -239,12 +241,16 @@ module "eks" {
       resolve_conflicts_on_create = "OVERWRITE"
       resolve_conflicts_on_update = "OVERWRITE"
     }
+    # Nodes can't become Ready without these, and the module creates the
+    # cluster without EKS's default add-ons, so a new cluster's node groups fail
+    # unless they're installed first.
     kube-proxy = {
+      before_compute              = true
       resolve_conflicts_on_create = "OVERWRITE"
       resolve_conflicts_on_update = "OVERWRITE"
     }
     vpc-cni = {
-      # before_compute = true
+      before_compute = true
     }
     aws-ebs-csi-driver = {
       resolve_conflicts_on_create = "OVERWRITE"
@@ -588,4 +594,15 @@ module "eks" {
   }, local.all_project_node_groups)
 
   tags = local.tags
+}
+# kube-proxy and vpc-cni became before_compute add-ons, which the module tracks
+# under a different address. Rename in state rather than replace them.
+moved {
+  from = module.eks.aws_eks_addon.this["kube-proxy"]
+  to   = module.eks.aws_eks_addon.before_compute["kube-proxy"]
+}
+
+moved {
+  from = module.eks.aws_eks_addon.this["vpc-cni"]
+  to   = module.eks.aws_eks_addon.before_compute["vpc-cni"]
 }

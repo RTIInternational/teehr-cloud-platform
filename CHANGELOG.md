@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased (us-east-1 stack)
+
+### Summary
+- Added the us-east-1 regional stack config (`teehr-hub-use1.tfvars`, `backends/use1.hcl`) and the runbook to
+  build it next to us-east-2 (RTIInternational/teehr-hub#462).
+
+### What Changed
+- `teehr-hub-use1.tfvars`: cluster `teehr-hub-use1`, AZs led by us-east-1c (best spot placement score for the
+  r5 family), buckets `teehr-iceberg-warehouse-use1` / `teehr-icechunk-warehouse-use1`.
+- `cluster_creator_admin` variable: EKS access entry for whoever applies, needed by the kubernetes/helm
+  providers on a new cluster.
+- `scripts/bootstrap-cluster-extras.sh`: cert-manager namespace, Contour CRDs and certgen Job, which Terraform
+  doesn't own.
+- `staging_ingress` in `terraform/global/`: `*.<label>.teehr.rtiamanzi.org` for testing a stack before cutover.
+- `ecr_registry` output; `ingress_elb_hostname` is null instead of an error before the load balancer exists.
+- `docs/new-regional-stack.md`.
+
 ## Unreleased (parallel regional stacks)
 
 ### Summary

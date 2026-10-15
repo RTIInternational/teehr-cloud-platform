@@ -8,6 +8,7 @@ data "kubernetes_service_v1" "envoy" {
 }
 
 output "ingress_elb_hostname" {
-  value       = data.kubernetes_service_v1.envoy.status[0].load_balancer[0].ingress[0].hostname
+  # Null until Contour's Envoy Service has a load balancer (e.g. a new stack).
+  value       = try(data.kubernetes_service_v1.envoy.status[0].load_balancer[0].ingress[0].hostname, null)
   description = "Envoy load balancer hostname, for global/'s ingress_elb_hostname"
 }

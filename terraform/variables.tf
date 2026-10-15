@@ -83,3 +83,12 @@ variable "legacy_iam_names" {
   names are account-wide, so any other stack needs the cluster-prefixed names.
   EOT
 }
+
+variable "cluster_creator_admin" {
+  type        = bool
+  default     = false
+  description = <<-EOT
+  Give the identity running Terraform a cluster-admin access entry. Needed on a
+  new cluster for the kubernetes/helm providers.
+  EOT
+}
