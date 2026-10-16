@@ -98,3 +98,11 @@ Then apply in `terraform/global`, passing the current banner message (see
 App deployments need the new stack's values (`terraform output`): `cluster_arn`, `ecr_registry`,
 `nfs_server_dns`, the IRSA role ARNs, and the bucket names. They go in the deployment repo's deploy target for
 this stack.
+
+Before the first app deploy, the deployment repo has to create the `ecr-config` secret in the `default`
+namespace. Garden checks it on every deploy and fails with `Could not find secret 'ecr-config'` without it.
+Add the new `ecr_registry` to the deployment repo's `config.json` first. From the teehr-hub repo root:
+
+```bash
+CONTEXT=arn:aws:eks:us-east-1:935462133478:cluster/teehr-hub-use1 ./create-ecr-secret-helper.sh
+```
