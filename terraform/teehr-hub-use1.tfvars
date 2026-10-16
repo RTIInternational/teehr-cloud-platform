@@ -16,6 +16,9 @@ azs = ["us-east-1c", "us-east-1d", "us-east-1b"]
 # Lets Terraform's kubernetes/helm providers reach the new cluster.
 cluster_creator_admin = true
 
+# No default StorageClass on clusters created on 1.30+.
+create_default_storage_class = true
+
 iceberg_warehouse_bucket  = "teehr-iceberg-warehouse-use1"
 icechunk_warehouse_bucket = "teehr-icechunk-warehouse-use1"
 
