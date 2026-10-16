@@ -101,3 +101,12 @@ variable "create_default_storage_class" {
   created on Kubernetes 1.30+, where EKS no longer marks gp2 as default.
   EOT
 }
+
+variable "unmanaged_ecr_repos" {
+  type        = list(string)
+  default     = []
+  description = <<-EOT
+  ECR repositories in local.ecr_repos that exist in this region but aren't
+  managed here (created outside Terraform with settings an import would replace).
+  EOT
+}

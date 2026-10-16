@@ -59,6 +59,10 @@ locals {
     {
       name            = "teehr-hub/keycloak-theme"
       max_image_count = 10
+    },
+    {
+      name            = "teehr-hub/xpublish-api"
+      max_image_count = 10
     }
   ]
 }
