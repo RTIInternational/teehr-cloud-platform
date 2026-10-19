@@ -1,5 +1,5 @@
 resource "aws_ecr_repository" "repos" {
-  for_each = { for repo in local.ecr_repos : repo.name => repo if !contains(var.unmanaged_ecr_repos, repo.name) }
+  for_each = { for repo in local.ecr_repos : repo.name => repo }
   name     = each.value.name
   image_scanning_configuration {
     scan_on_push = true
