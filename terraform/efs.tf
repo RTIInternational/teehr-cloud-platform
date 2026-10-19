@@ -75,10 +75,30 @@ resource "aws_efs_file_system" "datadir" {
   #   transition_to_archive = "AFTER_90_DAYS"
   # }
 
+  # DISABLED lets another file system replicate into this one (the region
+  # move). While replication runs, AWS reports REPLICATING here, so plans for
+  # the destination stack show a change to this block; don't apply it until
+  # replication is deleted.
+  protection {
+    replication_overwrite = var.efs_replication_overwrite
+  }
+
   lifecycle {
     # Additional safeguard against deleting the EFS
     # as this causes irreversible data loss!
     prevent_destroy = true
+  }
+}
+
+# Replicates /data into another region's file system (the region move). The
+# destination is read-only until this is deleted, which is the EFS cutover.
+resource "aws_efs_replication_configuration" "datadir" {
+  count                 = var.efs_replication_destination == null ? 0 : 1
+  source_file_system_id = aws_efs_file_system.datadir.id
+
+  destination {
+    file_system_id = var.efs_replication_destination.file_system_id
+    region         = var.efs_replication_destination.region
   }
 }
 

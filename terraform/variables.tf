@@ -101,3 +101,24 @@ variable "create_default_storage_class" {
   created on Kubernetes 1.30+, where EKS no longer marks gp2 as default.
   EOT
 }
+
+variable "efs_replication_overwrite" {
+  type        = string
+  default     = "ENABLED"
+  description = <<-EOT
+  EFS replication overwrite protection for /data. DISABLED allows another
+  file system to replicate into this one.
+  EOT
+}
+
+variable "efs_replication_destination" {
+  type = object({
+    file_system_id = string
+    region         = string
+  })
+  default     = null
+  description = <<-EOT
+  Existing file system in another region to replicate /data into. Its stack
+  must set efs_replication_overwrite = "DISABLED" first.
+  EOT
+}
