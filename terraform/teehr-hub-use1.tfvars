@@ -16,6 +16,9 @@ azs = ["us-east-1c", "us-east-1d", "us-east-1b"]
 # Lets Terraform's kubernetes/helm providers reach the new cluster.
 cluster_creator_admin = true
 
+# Destination of /data replication from us-east-2 until cutover.
+efs_replication_overwrite = "DISABLED"
+
 # No default StorageClass on clusters created on 1.30+.
 create_default_storage_class = true
 
