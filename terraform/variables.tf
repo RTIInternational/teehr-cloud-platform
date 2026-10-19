@@ -92,3 +92,12 @@ variable "cluster_creator_admin" {
   new cluster for the kubernetes/helm providers.
   EOT
 }
+
+variable "create_default_storage_class" {
+  type        = bool
+  default     = false
+  description = <<-EOT
+  Create a gp3 StorageClass and mark it the cluster default. Needed on clusters
+  created on Kubernetes 1.30+, where EKS no longer marks gp2 as default.
+  EOT
+}
