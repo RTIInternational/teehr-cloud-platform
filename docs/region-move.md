@@ -24,7 +24,7 @@ USE1=arn:aws:eks:us-east-1:935462133478:cluster/teehr-hub-use1
    ```
 
 2. Dry-run the table migration on one table (`02` with `ONLY_TABLES = ["teehr.units"]`, `03`, then `04` with
-   `TEST_NAMESPACE = "region_move_test"`). Every check in `04` must pass.
+   `DRY_RUN = True`, which drops the table again at the end). Every check in `04` must pass.
 3. Dry-run the Keycloak copy (teehr-cloud-core). It changes nothing; check the counts and dump sizes look sane:
 
    ```bash
@@ -97,7 +97,7 @@ cd warehouse/remote/05_region_move
 ### 6. Register tables (use1 JupyterHub, `hub.use1.teehr.rtiamanzi.org`)
 
 Wait until the manifest has replicated (`ls /data/region_move/` on use1 shows the run ID; usually within 15
-minutes). Run `04_register_tables.ipynb` with `RUN_ID` set and `TEST_NAMESPACE = None`. It must end with "All
+minutes). Run `04_register_tables.ipynb` with `RUN_ID` set and `DRY_RUN = False`. It must end with "All
 tables match."
 
 ### 7. Copy Keycloak and API databases (teehr-cloud-core)
