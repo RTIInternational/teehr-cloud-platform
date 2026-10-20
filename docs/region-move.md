@@ -85,7 +85,9 @@ cp /data/region_move/<run id>/rewrite_manifest.json ~/
 
 ### 5. Copy staged metadata (teehr-hub, laptop)
 
-Must end with "All tables ready to register".
+Must end with "All tables ready to register", with every table reporting "metadata points at
+s3://teehr-iceberg-warehouse-use1/...". From here on, **don't run `01_sync_buckets.sh` again**: the rewritten
+metadata keeps the original file names, so a sync would copy the old-path originals back over it.
 
 ```bash
 cd warehouse/remote/05_region_move
