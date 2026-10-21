@@ -6,7 +6,10 @@ Runbook for moving teehr-hub from the `teehr-hub` cluster (us-east-2) to `teehr-
 us-east-2, and the warehouse buckets have had a bulk copy.
 
 Code blocks have no comments so they paste cleanly into zsh. Run them from the repo named at the start of each
-step. All AWS commands assume `export AWS_PROFILE=ciroh_mdenno`.
+step, **on `main`**: older branches lack fixes to these scripts. All AWS commands assume
+`export AWS_PROFILE=ciroh_mdenno`.
+
+The notes marked **2026-10-21** are problems hit during the actual cutover, with what fixed them.
 
 ```bash
 export AWS_PROFILE=ciroh_mdenno
@@ -58,6 +61,11 @@ dig +short af55ad7d6786c4889a7dea3336d2f79e-2141472567.us-east-2.elb.amazonaws.c
 <ip>  hub.teehr.rtiamanzi.org auth.teehr.rtiamanzi.org
 ```
 
+Then fully quit and reopen the browser. **2026-10-21:** a browser that was already open kept using its
+connection to the maintenance page (CloudFront advertises HTTP/3, and the wildcard certificate lets it reuse the
+connection for every `*.teehr` host) and ignored `/etc/hosts`. Classic ELB IPs also change; re-run the `dig` if
+use2 stops answering.
+
 ### 2. Stop writes on us-east-2 (teehr-hub)
 
 Pause every Prefect deployment (this also deletes queued runs), then wait in the Prefect UI until no flow run
@@ -68,6 +76,12 @@ kubectl --context $USE2 -n teehr-hub exec -i deploy/prefect-worker -- python - <
 ```
 
 ### 3. Final bucket sync (teehr-hub)
+
+**2026-10-21:** `01` excluded the test tables by folder name, but the live table
+`teehr.nwmd_metrics_by_location_v2` is stored in the `nwmd_metrics_by_location_v2_test` folder (an Iceberg
+rename doesn't move files), so its data wasn't copied and `03` failed for it. Fixed by syncing that folder's
+data (excluding `metadata/` and `_region_move/`) and re-running `03`. Check table locations, not names, before
+excluding anything.
 
 ```bash
 cd warehouse/remote/05_region_move
@@ -91,7 +105,7 @@ metadata keeps the original file names, so a sync would copy the old-path origin
 
 ```bash
 cd warehouse/remote/05_region_move
-./03_copy_staged_metadata.sh ~/Downloads/rewrite_manifest.json
+./03_copy_staged_metadata.sh rewrite_manifest.json
 ```
 
 ### 6. Register tables (use1 JupyterHub, `hub.use1.teehr.rtiamanzi.org`)
@@ -100,12 +114,26 @@ Wait until the manifest has replicated (`ls /data/region_move/` on use1 shows th
 minutes). Run `04_register_tables.ipynb` with `RUN_ID` set and `DRY_RUN = False`. It must end with "All
 tables match."
 
+**2026-10-21:** `rewrite_table_path` (Iceberg 1.10.1) rewrites the manifests but writes the manifest lists with
+each manifest's *original* length. Spark tolerates that, so `04` passed, but Trino reads by the recorded length
+and failed with `Not an Avro data file` on most tables. Fix, in a use1 notebook, after registering:
+
+1. `CALL iceberg.system.rewrite_manifests(table => '<table>')` for every table.
+2. It skips a table with a single manifest, so for those set `commit.manifest.target-size-bytes` to `1024`,
+   rewrite (splits it), restore the property, and rewrite again (merges).
+3. Check through **Trino**, not just Spark: `SELECT count(*)` on every table must succeed.
+
 ### 7. Copy Keycloak and API databases (teehr-cloud-core)
 
 Stops Keycloak and the API on both clusters, copies the databases, compares counts, and starts the use1 side
 again. us-east-2 stays stopped. After this, use1's logins are the us-east-2 users.
 
+The script's `api_keys` count shows `n/a`: the API keys are in the `keycloak` database, not `teehr_api`
+(teehr-cloud-core#102). They're copied with it; compare `select count(*) from api_keys` in `keycloak` on both
+sides by hand.
+
 ```bash
+SRC_CONTEXT=$USE2 DST_CONTEXT=$USE1 DRY_RUN=1 ./scripts/copy-keycloak-db.sh
 SRC_CONTEXT=$USE2 DST_CONTEXT=$USE1 ./scripts/copy-keycloak-db.sh
 ```
 
@@ -139,6 +167,28 @@ Commit both tfvars changes.
 Merge the PR from "The day before" step 4, then run **Garden Deploy Remote** from `main` with target `use1`.
 This switches use1 to the `teehr.rtiamanzi.org` hostnames (Keycloak's bootstrap updates the client redirect
 URIs) and resumes its Prefect schedules.
+
+**2026-10-21:** Garden's action versions ignore variables used inside manifest templates, so most
+hostname-dependent deploys were skipped as "Already deployed". `force` (teehr-hub#477) fixed the ingresses and
+certificates, but not `keycloak` or `keycloak-realm-config`, which were only pulled in as dependencies. What
+worked:
+
+1. Run the deploy with **force** checked.
+2. Patch Keycloak's hostname and delete the two stale config maps, then deploy again:
+
+   ```bash
+   kubectl --context $USE1 -n teehr-hub patch keycloak keycloak --type merge -p '{"spec":{"hostname":{"hostname":"https://auth.teehr.rtiamanzi.org"}}}'
+   kubectl --context $USE1 -n teehr-hub delete configmap keycloak-realm-bootstrap xpublish-api-config
+   ```
+
+3. Restart the pods that read hostname-based config at startup (CORS failures on the dashboards otherwise):
+
+   ```bash
+   kubectl --context $USE1 -n teehr-hub rollout restart deploy/teehr-api deploy/xpublish-api
+   ```
+
+4. Confirm nothing still names the staging hosts: no ConfigMap, Deployment, StatefulSet, HTTPProxy or Keycloak
+   resource should contain `use1.teehr.rtiamanzi.org`.
 
 ### 10. DNS to use1, maintenance off (teehr-cloud-platform, `terraform/global`)
 
