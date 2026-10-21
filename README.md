@@ -63,6 +63,10 @@ terraform output
 Building a second stack next to an existing one (e.g. for the us-east-1 move) is a staged apply plus a few
 in-cluster bootstrap steps; see [docs/new-regional-stack.md](docs/new-regional-stack.md).
 
+### Region move
+
+The us-east-2 to us-east-1 cutover runbook, with rollback, is [docs/region-move.md](docs/region-move.md).
+
 ### Upgrading the EKS version
 
 EKS only moves one minor version at a time, and each hop needs its node groups rolled and
