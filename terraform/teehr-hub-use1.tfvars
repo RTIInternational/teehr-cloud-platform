@@ -19,6 +19,12 @@ cluster_creator_admin = true
 # No default StorageClass on clusters created on 1.30+.
 create_default_storage_class = true
 
+# Built and pushed by RTIInternational/hefs-fews-hub. us-east-2 has a
+# hand-made repo with this name, so it's only managed here.
+additional_ecr_repos = [
+  { name = "hefs-fews-hub", max_image_count = 10 },
+]
+
 iceberg_warehouse_bucket  = "teehr-iceberg-warehouse-use1"
 icechunk_warehouse_bucket = "teehr-icechunk-warehouse-use1"
 
