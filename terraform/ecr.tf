@@ -1,5 +1,5 @@
 resource "aws_ecr_repository" "repos" {
-  for_each = { for repo in local.ecr_repos : repo.name => repo }
+  for_each = { for repo in concat(local.ecr_repos, var.additional_ecr_repos) : repo.name => repo }
   name     = each.value.name
   image_scanning_configuration {
     scan_on_push = true

@@ -122,3 +122,15 @@ variable "efs_replication_destination" {
   must set efs_replication_overwrite = "DISABLED" first.
   EOT
 }
+
+variable "additional_ecr_repos" {
+  type = list(object({
+    name            = string
+    max_image_count = number
+  }))
+  default     = []
+  description = <<-EOT
+  Extra ECR repositories for this stack only, e.g. images built outside the
+  deployment repos (hefs-fews-hub).
+  EOT
+}
