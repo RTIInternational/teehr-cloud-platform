@@ -28,9 +28,9 @@ Regional stack:
 
 ```bash
 cd terraform
-terraform init -reconfigure -backend-config=backends/use2.hcl
-terraform plan -var-file=teehr-hub.tfvars
-terraform apply -var-file=teehr-hub.tfvars
+terraform init -reconfigure -backend-config=backends/use1.hcl
+terraform plan -var-file=teehr-hub-use1.tfvars
+terraform apply -var-file=teehr-hub-use1.tfvars
 ```
 
 Global resources (see [docs/maintenance-page.md](docs/maintenance-page.md) before applying; a plain apply clears
