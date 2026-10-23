@@ -1,0 +1,129 @@
+name: Terraform use1
+
+# Plans the use1 regional stack, then applies that exact plan once a
+# production reviewer approves it. A failed plan or a plan with no changes
+# skips the apply. global/ and other stacks are applied by hand (README).
+on:
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: Resource addresses to plan, space-separated (-target); empty plans everything
+        type: string
+        default: ""
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: terraform-use1
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: "1"
+  TF_INPUT: "0"
+  TF_VERSION: 1.15.7
+  AWS_REGION: us-east-1
+  PLAN_OBJECT: s3://teehr-terraform-state/plans/use1/${{ github.run_id }}.tfplan
+  STATE_BUCKET_REGION: us-east-2
+
+defaults:
+  run:
+    working-directory: terraform
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    environment: terraform-plan
+    outputs:
+      has_changes: ${{ steps.plan.outputs.has_changes }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive
+
+      - uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::935462133478:role/teehr-hub-github-actions-terraform-plan
+
+      - name: Init
+        run: terraform init -backend-config=backends/use1.hcl
+
+      - name: Plan
+        id: plan
+        env:
+          TARGETS: ${{ inputs.targets }}
+        run: |
+          read -ra targets <<< "$TARGETS"
+          target_args=()
+          for t in "${targets[@]}"; do
+            target_args+=("-target=$t")
+          done
+          set +e
+          terraform plan -var-file=teehr-hub-use1.tfvars -lock-timeout=5m -detailed-exitcode \
+            -out=tfplan "${target_args[@]}"
+          code=$?
+          set -e
+          [[ $code -eq 1 ]] && exit 1
+          echo "has_changes=$([[ $code -eq 2 ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      # The repo is public, so this summary is too. Sensitive values are redacted.
+      - name: Plan summary
+        run: |
+          {
+            echo "### use1 plan${TARGETS:+ (targets: $TARGETS)}"
+            echo '```'
+            terraform show -no-color tfplan | head -c 900000
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          TARGETS: ${{ inputs.targets }}
+
+      # Not a GitHub artifact: those are public here, and plan files hold full values.
+      # Runs don't overlap (concurrency), so older plans are from rejected or failed runs.
+      - name: Save plan
+        if: steps.plan.outputs.has_changes == 'true'
+        run: |
+          aws s3 rm "s3://teehr-terraform-state/plans/use1/" --recursive --region "$STATE_BUCKET_REGION"
+          aws s3 cp tfplan "$PLAN_OBJECT" --region "$STATE_BUCKET_REGION"
+
+  apply:
+    needs: plan
+    if: needs.plan.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      # A full apply can roll every node group, so allow the role's 4 h session.
+      - uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::935462133478:role/teehr-hub-github-actions-terraform-apply
+          role-duration-seconds: 14400
+
+      - name: Init
+        run: terraform init -backend-config=backends/use1.hcl
+
+      # Applies exactly the reviewed plan; Terraform refuses if state changed since.
+      - name: Apply
+        run: |
+          aws s3 cp "$PLAN_OBJECT" tfplan --region "$STATE_BUCKET_REGION"
+          terraform apply -lock-timeout=5m tfplan
+
+      - name: Delete saved plan
+        if: always()
+        run: aws s3 rm "$PLAN_OBJECT" --region "$STATE_BUCKET_REGION"
