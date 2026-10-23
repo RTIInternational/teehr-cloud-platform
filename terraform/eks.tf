@@ -222,9 +222,15 @@ module "eks" {
   authentication_mode    = "API_AND_CONFIG_MAP"
 
   # Grants whoever applies cluster admin, so Terraform's kubernetes/helm
-  # providers can reach a new cluster. The us-east-2 cluster has an equivalent
+  # providers can reach a new cluster. Turn it off once the cluster is built:
+  # it follows the caller, so applies by different identities (a dev, the CI
+  # roles) would swap the entry. The us-east-2 cluster has an equivalent
   # access entry created outside Terraform, so it leaves this off.
   enable_cluster_creator_admin_permissions = var.cluster_creator_admin
+
+  # Fixed, so the key policy doesn't follow whoever runs Terraform (the
+  # module's default). Other admins manage the key through the default policy.
+  kms_key_administrators = [data.aws_iam_role.teehr_hub_admin.arn]
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets

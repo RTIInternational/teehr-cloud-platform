@@ -27,8 +27,8 @@ is why the target is 1.36.
 
 `eks:*` is denied without MFA by the `DEV-FORCE-MFA` policy, so start from an MFA session.
 `kubectl` access additionally needs the `teehr-hub-teehr-hub-admin` role, which is the only
-access entry on the cluster — `enable_cluster_creator_admin_permissions` is commented out in
-`eks.tf`, so your own user has no cluster access of its own.
+person-facing access entry on the cluster (the others are the CI roles). `cluster_creator_admin`
+is off, so your own user has no cluster access of its own.
 
 ```bash
 aws sts get-session-token --serial-number <mfa-arn> --token-code <code>

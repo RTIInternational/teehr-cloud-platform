@@ -107,7 +107,7 @@ variable "cluster_creator_admin" {
   default     = false
   description = <<-EOT
   Give the identity running Terraform a cluster-admin access entry. Needed on a
-  new cluster for the kubernetes/helm providers.
+  new cluster for the kubernetes/helm providers; turn it off once it's built.
   EOT
 }
 
