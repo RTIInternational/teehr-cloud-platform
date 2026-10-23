@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased (Terraform workflow fix)
+
+### Summary
+- Fixed the first workflow apply failing on the `cluster_creator` access entry, and the EKS key policy following
+  whoever runs Terraform.
+
+### What Changed
+- `teehr-hub-use1.tfvars`: `cluster_creator_admin = false`. The workflow's plan role became the "creator", so the
+  apply removed Matt's entry and then hit a 409 creating one for the plan role, which already has its own.
+- `eks.tf`: `kms_key_administrators` set to the `teehr-hub-admin` role. It defaulted to the caller, so the first
+  workflow apply made the plan role an administrator of the cluster's KMS key.
+
+### Why
+- With applies from both people and CI roles, nothing should depend on who runs Terraform.
+
 ## Unreleased (Terraform workflow)
 
 ### Summary
