@@ -74,6 +74,24 @@ variable "admin_role_name" {
   EOT
 }
 
+variable "terraform_plan_role_name" {
+  type        = string
+  default     = "teehr-hub-github-actions-terraform-plan"
+  description = <<-EOT
+  Terraform workflow plan role (managed in global/) granted read-only access
+  on this cluster.
+  EOT
+}
+
+variable "terraform_apply_role_name" {
+  type        = string
+  default     = "teehr-hub-github-actions-terraform-apply"
+  description = <<-EOT
+  Terraform workflow apply role (managed in global/) granted cluster admin on
+  this cluster.
+  EOT
+}
+
 variable "legacy_iam_names" {
   type        = bool
   default     = false
@@ -89,7 +107,7 @@ variable "cluster_creator_admin" {
   default     = false
   description = <<-EOT
   Give the identity running Terraform a cluster-admin access entry. Needed on a
-  new cluster for the kubernetes/helm providers.
+  new cluster for the kubernetes/helm providers; turn it off once it's built.
   EOT
 }
 

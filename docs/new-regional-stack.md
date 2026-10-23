@@ -11,7 +11,8 @@ A stack is a backend file in `terraform/backends/` plus a tfvars file. The us-ea
   off.
 - The warehouse bucket names are new; S3 names are global.
 - `cluster_creator_admin = true` gives the identity running Terraform an EKS access entry, which the
-  kubernetes/helm providers need on the new cluster.
+  kubernetes/helm providers need on the new cluster. Set it back to `false` once the stack is built, before
+  anyone else (or the GitHub Actions workflow) applies it: the entry follows whoever runs Terraform.
 - `azs` puts node groups and the EFS mount target in an AZ with all the node instance types. Check spot
   capacity with `aws ec2 get-spot-placement-scores` when choosing.
 

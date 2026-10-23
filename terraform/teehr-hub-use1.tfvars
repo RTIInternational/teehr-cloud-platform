@@ -13,8 +13,9 @@ project_name = "teehr"
 # Avoid us-east-1e, which lacks these instance types.
 azs = ["us-east-1c", "us-east-1d", "us-east-1b"]
 
-# Lets Terraform's kubernetes/helm providers reach the new cluster.
-cluster_creator_admin = true
+# Only while building the cluster. Off now that the admin and CI roles have
+# their own access entries.
+cluster_creator_admin = false
 
 # No default StorageClass on clusters created on 1.30+.
 create_default_storage_class = true

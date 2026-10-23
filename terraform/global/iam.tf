@@ -105,3 +105,87 @@ resource "aws_iam_role_policy" "github_actions_garden_deploy" {
     ]
   })
 }
+# IAM roles for the Terraform workflow (.github/workflows/terraform-use1.yml).
+# Each is trusted only by jobs in one GitHub environment: the plan job
+# (terraform-plan) and the apply job (production, which has required reviewers).
+locals {
+  terraform_state_bucket = "teehr-terraform-state"
+  terraform_repo         = "repo:RTIInternational/teehr-cloud-platform"
+}
+
+data "aws_iam_policy_document" "github_actions_terraform_trust" {
+  for_each = toset(["terraform-plan", "production"])
+
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.github_actions.arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:sub"
+      values   = ["${local.terraform_repo}:environment:${each.key}"]
+    }
+  }
+}
+
+# Plan: read-only, plus writing the state lock and the saved plan file.
+resource "aws_iam_role" "github_actions_terraform_plan" {
+  name               = "${var.name}-github-actions-terraform-plan"
+  assume_role_policy = data.aws_iam_policy_document.github_actions_terraform_trust["terraform-plan"].json
+
+  tags = {
+    "teehr-hub/role"    = "github-actions-terraform-plan"
+    "teehr-hub/purpose" = "cicd"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "github_actions_terraform_plan_readonly" {
+  role       = aws_iam_role.github_actions_terraform_plan.name
+  policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
+}
+
+data "aws_iam_policy_document" "github_actions_terraform_plan_state" {
+  statement {
+    effect  = "Allow"
+    actions = ["s3:PutObject", "s3:DeleteObject"]
+    resources = [
+      "arn:aws:s3:::${local.terraform_state_bucket}/*.tflock",
+      "arn:aws:s3:::${local.terraform_state_bucket}/plans/*",
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "github_actions_terraform_plan_state" {
+  name   = "terraform-state-lock-and-plans"
+  role   = aws_iam_role.github_actions_terraform_plan.id
+  policy = data.aws_iam_policy_document.github_actions_terraform_plan_state.json
+}
+
+# Apply: admin, gated by the production environment's reviewers. A full
+# apply can roll every node group, so sessions last up to 4 h.
+resource "aws_iam_role" "github_actions_terraform_apply" {
+  name                 = "${var.name}-github-actions-terraform-apply"
+  assume_role_policy   = data.aws_iam_policy_document.github_actions_terraform_trust["production"].json
+  max_session_duration = 14400
+
+  tags = {
+    "teehr-hub/role"    = "github-actions-terraform-apply"
+    "teehr-hub/purpose" = "cicd"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "github_actions_terraform_apply_admin" {
+  role       = aws_iam_role.github_actions_terraform_apply.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+}

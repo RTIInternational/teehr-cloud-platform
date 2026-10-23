@@ -199,9 +199,21 @@ data "aws_iam_role" "teehr_hub_admin" {
   name = var.admin_role_name
 }
 
+# Terraform workflow roles, also managed in global/. Their access entries let
+# the kubernetes/helm providers reach the cluster from GitHub Actions.
+data "aws_iam_role" "github_terraform_plan" {
+  name = var.terraform_plan_role_name
+}
+
+data "aws_iam_role" "github_terraform_apply" {
+  name = var.terraform_apply_role_name
+}
+
 module "eks" {
-  source  = "terraform-aws-modules/eks/aws"
-  version = "~> 21.0"
+  source = "terraform-aws-modules/eks/aws"
+  # Module versions aren't locked, so pin to the line that works with the
+  # locked aws provider (21.25+ needs aws >= 6.59). Bump together.
+  version = "~> 21.24.0"
 
   name               = var.cluster_name
   kubernetes_version = var.cluster_version
@@ -210,9 +222,15 @@ module "eks" {
   authentication_mode    = "API_AND_CONFIG_MAP"
 
   # Grants whoever applies cluster admin, so Terraform's kubernetes/helm
-  # providers can reach a new cluster. The us-east-2 cluster has an equivalent
+  # providers can reach a new cluster. Turn it off once the cluster is built:
+  # it follows the caller, so applies by different identities (a dev, the CI
+  # roles) would swap the entry. The us-east-2 cluster has an equivalent
   # access entry created outside Terraform, so it leaves this off.
   enable_cluster_creator_admin_permissions = var.cluster_creator_admin
+
+  # Fixed, so the key policy doesn't follow whoever runs Terraform (the
+  # module's default). Other admins manage the key through the default policy.
+  kms_key_administrators = [data.aws_iam_role.teehr_hub_admin.arn]
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
@@ -224,6 +242,31 @@ module "eks" {
   access_entries = {
     admin = {
       principal_arn = data.aws_iam_role.teehr_hub_admin.arn
+      type          = "STANDARD"
+      policy_associations = {
+        admin_policy = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      }
+    }
+    # Read-only, including Secrets, which the helm provider reads for release state.
+    github_terraform_plan = {
+      principal_arn = data.aws_iam_role.github_terraform_plan.arn
+      type          = "STANDARD"
+      policy_associations = {
+        admin_view_policy = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminViewPolicy"
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      }
+    }
+    github_terraform_apply = {
+      principal_arn = data.aws_iam_role.github_terraform_apply.arn
       type          = "STANDARD"
       policy_associations = {
         admin_policy = {
