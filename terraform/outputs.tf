@@ -36,6 +36,11 @@ output "xpublish_api_role_arn" {
   description = "ARN of the IRSA role for the xpublish-api service account, granting read-only access to the icechunk warehouse bucket"
 }
 
+output "icechunk_access_role_arn" {
+  value       = aws_iam_role.icechunk_s3_warehouse_access.arn
+  description = "ARN of the Icechunk data-access role that xpublish-api assumes to vend per-user scoped, read-only credentials"
+}
+
 output "icechunk_warehouse_bucket" {
   value       = aws_s3_bucket.teehr_icechunk_warehouse.bucket
   description = "Name of the icechunk warehouse bucket backing the gridded-data (xpublish-api) stack"
