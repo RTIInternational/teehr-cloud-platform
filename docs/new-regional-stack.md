@@ -39,7 +39,9 @@ T=(
   -target=aws_iam_role_policy_attachment.polaris_assume_warehouse_role
   -target=aws_iam_role_policy_attachment.prefect_job_iceberg_rw
   -target=aws_iam_role_policy_attachment.prefect_job_icechunk_rw
+  -target=aws_iam_role_policy_attachment.icechunk_s3_warehouse_readonly
   -target=aws_iam_role_policy_attachment.vpc_cni_policy
+  -target=aws_iam_role_policy_attachment.xpublish_api_assume_icechunk_role
   -target=aws_iam_role_policy_attachment.xpublish_api_icechunk_readonly
 )
 terraform apply -var-file=teehr-hub-use1.tfvars "${T[@]}"

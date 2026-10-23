@@ -42,3 +42,23 @@ resource "aws_iam_role_policy_attachment" "xpublish_api_icechunk_readonly" {
   role       = aws_iam_role.xpublish_api_irsa.name
   policy_arn = aws_iam_policy.icechunk_s3_warehouse_readonly.arn
 }
+
+# Lets xpublish-api assume the Icechunk data-access role
+# (icechunk-s3-warehouse-access.tf) to vend per-user scoped credentials.
+data "aws_iam_policy_document" "xpublish_api_assume_icechunk_role" {
+  statement {
+    effect    = "Allow"
+    actions   = ["sts:AssumeRole"]
+    resources = [aws_iam_role.icechunk_s3_warehouse_access.arn]
+  }
+}
+
+resource "aws_iam_policy" "xpublish_api_assume_icechunk_role" {
+  name   = "${local.cluster_name}-xpublish-api-assume-icechunk-role"
+  policy = data.aws_iam_policy_document.xpublish_api_assume_icechunk_role.json
+}
+
+resource "aws_iam_role_policy_attachment" "xpublish_api_assume_icechunk_role" {
+  role       = aws_iam_role.xpublish_api_irsa.name
+  policy_arn = aws_iam_policy.xpublish_api_assume_icechunk_role.arn
+}
