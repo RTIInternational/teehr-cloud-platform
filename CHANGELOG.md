@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased (Terraform workflow)
+
+### Summary
+- Added a GitHub Actions workflow that plans the use1 stack and applies the reviewed plan after a `production`
+  approval, so applies no longer need one person's AWS credentials.
+
+### What Changed
+- `.github/workflows/terraform-use1.yml`: manual trigger with optional `targets`; saved plans go to the state
+  bucket (`plans/use1/`), not public artifacts.
+- `terraform/global/iam.tf`: `teehr-hub-github-actions-terraform-plan` (`ReadOnlyAccess` plus state lock and
+  plan writes) and `-apply` (`AdministratorAccess`, 4 h sessions), each trusted only by one GitHub environment.
+- `terraform/eks.tf`: EKS access entries for both roles (admin view and cluster admin).
+- EKS module pinned to `~> 21.24.0`: 21.25+ needs aws >= 6.59, so a fresh `init` failed against the locked aws
+  6.53.0.
+- Lock files now include linux_amd64 and darwin hashes.
+
+### Why
+- Only one dev could apply. The workflow uses short-lived OIDC credentials, and every apply is reviewed.
+
 ## Unreleased (us-east-1 stack)
 
 ### Summary
