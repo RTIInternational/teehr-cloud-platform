@@ -21,13 +21,31 @@ resource "aws_ecr_lifecycle_policy" "repos" {
 
   policy = jsonencode({
     rules = [
+      # Untagged images are superseded build pushes; nothing deploys them, but
+      # Inspector keeps rescanning and reporting them.
       {
         rulePriority = 1
+        description  = "Expire untagged images after 1 day"
+        selection = {
+          tagStatus   = "untagged"
+          countType   = "sinceImagePushed"
+          countUnit   = "days"
+          countNumber = 1
+        }
+        action = {
+          type = "expire"
+        }
+      },
+      # Garden tags builds v-<hash>. Counting only those keeps _buildcache and
+      # untagged cache manifests from pushing deployed images out.
+      {
+        rulePriority = 2
         description  = "Keep only the last N images"
         selection = {
-          tagStatus   = "any"
-          countType   = "imageCountMoreThan"
-          countNumber = lookup({ for repo in local.ecr_repos : repo.name => repo.max_image_count }, each.key, 10)
+          tagStatus     = "tagged"
+          tagPrefixList = ["v-"]
+          countType     = "imageCountMoreThan"
+          countNumber   = lookup({ for repo in local.ecr_repos : repo.name => repo.max_image_count }, each.key, 10)
         }
         action = {
           type = "expire"

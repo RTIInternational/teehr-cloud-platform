@@ -30,39 +30,39 @@ locals {
   ecr_repos = [
     {
       name            = "teehr-hub/jupyter-driver"
-      max_image_count = 10
+      max_image_count = 6
     },
     {
       name            = "teehr-hub/spark-executor"
-      max_image_count = 10
+      max_image_count = 5
     },
     {
       name            = "teehr-hub/teehr-prefect"
-      max_image_count = 10
+      max_image_count = 5
     },
     {
       name            = "teehr-hub/panel-dashboards"
-      max_image_count = 10
+      max_image_count = 5
     },
     {
       name            = "teehr-hub/teehr-api"
-      max_image_count = 10
+      max_image_count = 5
     },
     {
       name            = "teehr-hub/teehr-dashboards"
-      max_image_count = 10
+      max_image_count = 5
     },
     {
       name            = "teehr-hub/teehr-frontend"
-      max_image_count = 10
+      max_image_count = 5
     },
     {
       name            = "teehr-hub/keycloak-theme"
-      max_image_count = 10
+      max_image_count = 5
     },
     {
       name            = "teehr-hub/xpublish-api"
-      max_image_count = 10
+      max_image_count = 5
     }
   ]
 }
