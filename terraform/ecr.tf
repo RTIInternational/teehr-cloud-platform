@@ -36,3 +36,20 @@ resource "aws_ecr_lifecycle_policy" "repos" {
     ]
   })
 }
+
+# Registry-wide, per region. Continuous scanning has Inspector rescan images
+# when new CVEs are published, not only on push, so long-running images (e.g.
+# the Spark executor) keep current findings. How long an image keeps being
+# rescanned after its last push or pull is the Inspector account setting
+# (currently 7 days), so images still pulled by running pods stay covered.
+resource "aws_ecr_registry_scanning_configuration" "this" {
+  scan_type = "ENHANCED"
+
+  rule {
+    scan_frequency = "CONTINUOUS_SCAN"
+    repository_filter {
+      filter      = "*"
+      filter_type = "WILDCARD"
+    }
+  }
+}
