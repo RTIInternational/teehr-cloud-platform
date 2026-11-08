@@ -15,6 +15,16 @@ module "vpc" {
   enable_nat_gateway = true
   single_nat_gateway = true
 
+  # IPv6 egress: private subnets get IPv6 and a ::/0 route to an egress-only
+  # internet gateway. IPv4 traffic still uses the NAT gateway.
+  enable_ipv6                                    = var.enable_ipv6_egress
+  private_subnet_ipv6_prefixes                   = var.enable_ipv6_egress ? [for k, v in local.azs : k] : []
+  private_subnet_assign_ipv6_address_on_creation = var.enable_ipv6_egress
+  # DNS64 would give IPv4-only hosts, S3 included, IPv6 addresses routed through
+  # the NAT gateway, which would take S3 traffic off the gateway endpoint.
+  private_subnet_enable_dns64                                   = false
+  private_subnet_enable_resource_name_dns_aaaa_record_on_launch = false
+
   tags = local.tags
 
   public_subnet_tags = {

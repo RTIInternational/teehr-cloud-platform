@@ -152,3 +152,12 @@ variable "additional_ecr_repos" {
   deployment repos (hefs-fews-hub).
   EOT
 }
+
+variable "enable_ipv6_egress" {
+  type        = bool
+  default     = false
+  description = <<-EOT
+  Give private subnets and nodes IPv6 and route it through an egress-only
+  internet gateway, so traffic to IPv6 destinations skips the NAT gateway. Only teehr-hub-use1 sets this.
+  EOT
+}
