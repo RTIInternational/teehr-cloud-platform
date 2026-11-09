@@ -293,7 +293,14 @@ module "eks" {
       resolve_conflicts_on_update = "OVERWRITE"
     }
     vpc-cni = {
-      before_compute = true
+      before_compute              = true
+      resolve_conflicts_on_update = "OVERWRITE"
+      # Pods get a private IPv6 address that the node translates on the way
+      # out, so traffic to IPv6 destinations skips the NAT gateway.
+      configuration_values = var.enable_ipv6_egress ? jsonencode({
+        env  = { ENABLE_V6_EGRESS = "true" }
+        init = { env = { ENABLE_V6_EGRESS = "true" } }
+      }) : null
     }
     aws-ebs-csi-driver = {
       resolve_conflicts_on_create = "OVERWRITE"
@@ -325,7 +332,7 @@ module "eks" {
   }
 
   # Extend node-to-node security group rules
-  node_security_group_additional_rules = {
+  node_security_group_additional_rules = merge({
     ingress_self_all = {
       description = "Node to node all ports/protocols"
       protocol    = "-1"
@@ -334,7 +341,17 @@ module "eks" {
       type        = "ingress"
       self        = true
     }
-  }
+    }, var.enable_ipv6_egress ? {
+    # The module's own egress rule only covers ::/0 on IPv6 clusters.
+    egress_ipv6_all = {
+      description      = "Node all IPv6 egress"
+      protocol         = "-1"
+      from_port        = 0
+      to_port          = 0
+      type             = "egress"
+      ipv6_cidr_blocks = ["::/0"]
+    }
+  } : {})
 
   eks_managed_node_groups = merge({
     core-a = merge(local.eks_node_group_defaults, {

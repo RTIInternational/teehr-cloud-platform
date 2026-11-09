@@ -26,6 +26,10 @@ additional_ecr_repos = [
   { name = "hefs-fews-hub", max_image_count = 10 },
 ]
 
+# Send traffic to IPv6 destinations through an egress-only internet gateway
+# instead of the NAT gateway (teehr-cloud-platform #36).
+enable_ipv6_egress = true
+
 iceberg_warehouse_bucket  = "teehr-iceberg-warehouse-use1"
 icechunk_warehouse_bucket = "teehr-icechunk-warehouse-use1"
 
