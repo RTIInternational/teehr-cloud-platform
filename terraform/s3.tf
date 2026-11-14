@@ -105,7 +105,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "teehr_db_backups" {
   rule {
     id     = "expire-old-backups"
     status = "Enabled"
-    filter {}
+    # Only the dumps; anything else stored here later isn't expired by this rule.
+    filter {
+      prefix = "postgres/"
+    }
 
     expiration {
       days = var.db_backup_retention_days
