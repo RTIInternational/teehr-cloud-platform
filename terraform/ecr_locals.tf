@@ -61,6 +61,10 @@ locals {
       max_image_count = 5
     },
     {
+      name            = "teehr-hub/db-backup"
+      max_image_count = 5
+    },
+    {
       name            = "teehr-hub/xpublish-api"
       max_image_count = 5
     }
