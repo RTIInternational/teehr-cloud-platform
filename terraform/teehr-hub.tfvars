@@ -10,6 +10,7 @@ project_name = "teehr"
 
 iceberg_warehouse_bucket  = "dev-teehr-iceberg-warehouse"
 icechunk_warehouse_bucket = "dev-teehr-icechunk-warehouse"
+db_backup_bucket          = "dev-teehr-db-backups"
 
 # IAM names predate the per-cluster prefixes; drop with this stack.
 legacy_iam_names = true
