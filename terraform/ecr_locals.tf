@@ -67,6 +67,10 @@ locals {
     {
       name            = "teehr-hub/xpublish-api"
       max_image_count = 5
+    },
+    {
+      name            = "teehr-hub/teehr-control-plane"
+      max_image_count = 5
     }
   ]
 }

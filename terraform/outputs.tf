@@ -61,3 +61,13 @@ output "db_backup_role_arn" {
   description = "ARN of the IRSA role for the db-backup service account: write-only to the backup bucket"
 }
 
+
+output "upload_staging_bucket" {
+  value       = aws_s3_bucket.upload_staging.bucket
+  description = "Bucket where uploaded files wait to be loaded (teehr-cloud-core control-plane)"
+}
+
+output "control_plane_role_arn" {
+  value       = aws_iam_role.control_plane_irsa.arn
+  description = "ARN of the IRSA role for the teehr-control-plane service account: the upload staging bucket only"
+}

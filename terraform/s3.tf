@@ -121,3 +121,73 @@ resource "aws_s3_bucket_lifecycle_configuration" "teehr_db_backups" {
     }
   }
 }
+
+# Upload staging (teehr-cloud-core control-plane): files users upload, waiting to be
+# inspected and loaded. Private; written only through URLs the control plane signs.
+# Short-lived by design: expired after var.upload_staging_retention_days.
+resource "aws_s3_bucket" "upload_staging" {
+  bucket = var.upload_staging_bucket
+
+  tags = {
+    Name        = var.upload_staging_bucket
+    Environment = var.environment
+    Project     = var.project_name
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "upload_staging" {
+  bucket = aws_s3_bucket.upload_staging.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_ownership_controls" "upload_staging" {
+  bucket = aws_s3_bucket.upload_staging.id
+  rule {
+    object_ownership = "BucketOwnerEnforced"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "upload_staging" {
+  bucket = aws_s3_bucket.upload_staging.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "upload_staging" {
+  bucket = aws_s3_bucket.upload_staging.id
+
+  rule {
+    id     = "expire-staged-uploads"
+    status = "Enabled"
+    filter {}
+
+    expiration {
+      days = var.upload_staging_retention_days
+    }
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 1
+    }
+  }
+}
+
+# Browsers PUT files straight to the bucket with a presigned URL, so the web origins
+# that upload need CORS. None configured: no CORS rule (CLI/SDK uploads still work).
+resource "aws_s3_bucket_cors_configuration" "upload_staging" {
+  count  = length(var.upload_cors_origins) > 0 ? 1 : 0
+  bucket = aws_s3_bucket.upload_staging.id
+
+  cors_rule {
+    allowed_methods = ["PUT"]
+    allowed_origins = var.upload_cors_origins
+    allowed_headers = ["*"]
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3000
+  }
+}

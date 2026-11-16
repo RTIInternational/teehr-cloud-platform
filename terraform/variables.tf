@@ -177,3 +177,29 @@ variable "db_backup_retention_days" {
   versions after 7 days, are expired.
   EOT
 }
+
+variable "upload_staging_bucket" {
+  type        = string
+  description = <<-EOT
+  Name of the bucket where uploaded files wait to be inspected and loaded
+  (teehr-cloud-core control-plane).
+  EOT
+}
+
+variable "upload_staging_retention_days" {
+  type        = number
+  default     = 7
+  description = <<-EOT
+  Days a staged upload is kept. A load reads its file within minutes of the ingest;
+  anything older is an abandoned upload.
+  EOT
+}
+
+variable "upload_cors_origins" {
+  type        = list(string)
+  default     = []
+  description = <<-EOT
+  Web origins allowed to PUT files to the staging bucket from a browser (e.g.
+  https://dashboards.<hostname>). Empty: no CORS rule.
+  EOT
+}
