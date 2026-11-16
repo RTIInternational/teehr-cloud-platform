@@ -32,6 +32,7 @@ enable_ipv6_egress = true
 
 iceberg_warehouse_bucket  = "teehr-iceberg-warehouse-use1"
 icechunk_warehouse_bucket = "teehr-icechunk-warehouse-use1"
+db_backup_bucket          = "teehr-db-backups-use1"
 
 # CIROH project IDs for dedicated node groups
 # Each project ID will create: nb-r5-xlarge-{id}, nb-r5-4xlarge-{id}, spark-r5-4xlarge-spot-{id}

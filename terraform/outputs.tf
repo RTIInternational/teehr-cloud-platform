@@ -50,3 +50,14 @@ output "ecr_registry" {
   value       = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.region}.amazonaws.com"
   description = "ECR registry host for this stack's images"
 }
+
+output "db_backup_bucket" {
+  value       = aws_s3_bucket.teehr_db_backups.bucket
+  description = "Bucket for Postgres backups (teehr-cloud-core db-backups)"
+}
+
+output "db_backup_role_arn" {
+  value       = aws_iam_role.db_backup_irsa.arn
+  description = "ARN of the IRSA role for the db-backup service account: write-only to the backup bucket"
+}
+

@@ -161,3 +161,19 @@ variable "enable_ipv6_egress" {
   internet gateway, so traffic to IPv6 destinations skips the NAT gateway. Only teehr-hub-use1 sets this.
   EOT
 }
+
+variable "db_backup_bucket" {
+  type        = string
+  description = <<-EOT
+  Name of the bucket for Postgres backups (teehr-cloud-core db-backups).
+  EOT
+}
+
+variable "db_backup_retention_days" {
+  type        = number
+  default     = 35
+  description = <<-EOT
+  Days to keep each Postgres backup. Older dumps, and overwritten or deleted
+  versions after 7 days, are expired.
+  EOT
+}

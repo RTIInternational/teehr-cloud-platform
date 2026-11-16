@@ -54,3 +54,70 @@ resource "aws_s3_bucket_public_access_block" "teehr_icechunk_warehouse_public_ac
 #   })
 # }
 
+# Postgres backups (teehr-cloud-core db-backups). Versioned, so a backup can't be
+# destroyed by overwriting or deleting it; expired after var.db_backup_retention_days.
+resource "aws_s3_bucket" "teehr_db_backups" {
+  bucket = var.db_backup_bucket
+
+  tags = {
+    Name        = var.db_backup_bucket
+    Environment = var.environment
+    Project     = var.project_name
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "teehr_db_backups_public_access_block" {
+  bucket = aws_s3_bucket.teehr_db_backups.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_ownership_controls" "teehr_db_backups" {
+  bucket = aws_s3_bucket.teehr_db_backups.id
+  rule {
+    object_ownership = "BucketOwnerEnforced"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "teehr_db_backups" {
+  bucket = aws_s3_bucket.teehr_db_backups.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_versioning" "teehr_db_backups" {
+  bucket = aws_s3_bucket.teehr_db_backups.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "teehr_db_backups" {
+  bucket     = aws_s3_bucket.teehr_db_backups.id
+  depends_on = [aws_s3_bucket_versioning.teehr_db_backups]
+
+  rule {
+    id     = "expire-old-backups"
+    status = "Enabled"
+    # Only the dumps; anything else stored here later isn't expired by this rule.
+    filter {
+      prefix = "postgres/"
+    }
+
+    expiration {
+      days = var.db_backup_retention_days
+    }
+    noncurrent_version_expiration {
+      noncurrent_days = 7
+    }
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 1
+    }
+  }
+}
