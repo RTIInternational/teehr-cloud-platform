@@ -6,7 +6,7 @@
 # bucket is public), except listing, which the Jupyter role already has
 # (iceberg-s3-warehouse-readonly-irsa.tf).
 
-data "aws_iam_policy_document" "hefs_data_write" {
+data "aws_iam_policy_document" "hefs_data_s3_write" {
   count = local.hefs_data_enabled ? 1 : 0
 
   statement {
@@ -32,19 +32,19 @@ data "aws_iam_policy_document" "hefs_data_write" {
   }
 }
 
-resource "aws_iam_policy" "hefs_data_write" {
+resource "aws_iam_policy" "hefs_data_s3_write" {
   count  = local.hefs_data_enabled ? 1 : 0
-  name   = "${local.cluster_name}-hefs-data-write"
-  policy = data.aws_iam_policy_document.hefs_data_write[0].json
+  name   = "${local.cluster_name}-hefs-data-s3-write"
+  policy = data.aws_iam_policy_document.hefs_data_s3_write[0].json
 }
 
-resource "aws_iam_group" "hefs_data_writers" {
+resource "aws_iam_group" "hefs_data_s3_writers" {
   count = local.hefs_data_enabled ? 1 : 0
-  name  = "${local.cluster_name}-hefs-data-writers"
+  name  = "${local.cluster_name}-hefs-data-s3-writers"
 }
 
-resource "aws_iam_group_policy_attachment" "hefs_data_writers" {
+resource "aws_iam_group_policy_attachment" "hefs_data_s3_writers" {
   count      = local.hefs_data_enabled ? 1 : 0
-  group      = aws_iam_group.hefs_data_writers[0].name
-  policy_arn = aws_iam_policy.hefs_data_write[0].arn
+  group      = aws_iam_group.hefs_data_s3_writers[0].name
+  policy_arn = aws_iam_policy.hefs_data_s3_write[0].arn
 }

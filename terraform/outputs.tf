@@ -77,7 +77,7 @@ output "hefs_data_bucket" {
   description = "Public HEFS-FEWS data bucket (hefs-fews-hub BUCKET_NAME), or null on stacks without one"
 }
 
-output "hefs_data_writers_group" {
-  value       = local.hefs_data_enabled ? aws_iam_group.hefs_data_writers[0].name : null
+output "hefs_data_s3_writers_group" {
+  value       = local.hefs_data_enabled ? aws_iam_group.hefs_data_s3_writers[0].name : null
   description = "IAM group whose members can write to the HEFS-FEWS data bucket; membership is managed by hand"
 }

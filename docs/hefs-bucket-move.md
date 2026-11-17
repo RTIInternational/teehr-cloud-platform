@@ -46,8 +46,8 @@ NAME=hefs-bucket-copy
 ## 1. Create the bucket (Terraform)
 
 Run the `terraform-use1` workflow (Actions, Run workflow) on `main` after the PR merges, leaving `targets` empty.
-The plan should add the bucket and its settings, the `teehr-hub-use1-hefs-data-write` policy and
-`teehr-hub-use1-hefs-data-writers` group, and update `teehr-hub-use1-iceberg-s3-warehouse-readonly` in place to
+The plan should add the bucket and its settings, the `teehr-hub-use1-hefs-data-s3-write` policy and
+`teehr-hub-use1-hefs-data-s3-writers` group, and update `teehr-hub-use1-iceberg-s3-warehouse-readonly` in place to
 add the new bucket. It should change nothing else.
 
 Check:
@@ -177,7 +177,7 @@ The first should print 200 and the second 403.
 4. **Switch writers.** Add each writer's IAM user to the group:
 
    ```bash
-   aws iam add-user-to-group --group-name teehr-hub-use1-hefs-data-writers --user-name <user>
+   aws iam add-user-to-group --group-name teehr-hub-use1-hefs-data-s3-writers --user-name <user>
    ```
 
 5. **Make the old bucket read-only**, so a stale script can't write to it. This replaces its policy, keeping the
@@ -227,7 +227,7 @@ The last command should print `[]`. (Terminated instances can show for up to an 
   name. Does it move, stay in us-east-2, or go to a cheaper storage class? Leaving it out cuts the copy cost from
   about $91 to $3 and saves about $200/month of storage.
 - **Writers:** who has write access to the old bucket now (needs an account admin's IAM export), and which IAM
-  users join `teehr-hub-use1-hefs-data-writers`? Is the hefs-fews-hub CI key (`AWI_RTI_HEFS_*`) one of them?
+  users join `teehr-hub-use1-hefs-data-s3-writers`? Is the hefs-fews-hub CI key (`AWI_RTI_HEFS_*`) one of them?
 - **Delete permission:** the writers' policy allows `DeleteObject`, since configurations get replaced wholesale.
   Is that wanted, or should deletes be admin-only?
 - **Versioning:** the old bucket has none, which matches what was set up here. Hand edits like the 2026-10-29

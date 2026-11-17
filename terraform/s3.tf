@@ -257,7 +257,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "hefs_data" {
   }
 }
 
-data "aws_iam_policy_document" "hefs_data_public_read" {
+data "aws_iam_policy_document" "hefs_data_s3_public_read" {
   count = local.hefs_data_enabled ? 1 : 0
 
   statement {
@@ -276,7 +276,7 @@ data "aws_iam_policy_document" "hefs_data_public_read" {
 resource "aws_s3_bucket_policy" "hefs_data" {
   count  = local.hefs_data_enabled ? 1 : 0
   bucket = aws_s3_bucket.hefs_data[0].id
-  policy = data.aws_iam_policy_document.hefs_data_public_read[0].json
+  policy = data.aws_iam_policy_document.hefs_data_s3_public_read[0].json
 
   # S3 rejects a public policy until the access block allows one.
   depends_on = [aws_s3_bucket_public_access_block.hefs_data]

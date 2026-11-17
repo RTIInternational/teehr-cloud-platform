@@ -11,11 +11,11 @@
 - `terraform/s3.tf`: the bucket, created only when `hefs_data_bucket` is set (use1). Same settings as the
   old bucket: public `GetObject`, ACLs blocked, `BucketOwnerEnforced`, SSE-S3. It also aborts incomplete
   multipart uploads after 7 days.
-- `terraform/hefs-data-policies.tf`: `<cluster>-hefs-data-write` policy and `<cluster>-hefs-data-writers` group
-  for the people who maintain the data. Membership is managed by hand.
+- `terraform/hefs-data-policies.tf`: `<cluster>-hefs-data-s3-write` policy and `<cluster>-hefs-data-s3-writers`
+  group for the people who maintain the data. Membership is managed by hand.
 - `terraform/iceberg-s3-warehouse-readonly-irsa.tf`: Jupyter's read-only role can also read the new bucket. The
   old bucket stays until the move is done.
-- `hefs_data_bucket` variable and output, plus a `hefs_data_writers_group` output.
+- `hefs_data_bucket` variable and output, plus a `hefs_data_s3_writers_group` output.
 - `docs/hefs-bucket-move.md`: copy runbook on a temporary EC2 instance that isn't in Terraform, plus cutover,
   rollback and teardown.
 
