@@ -203,3 +203,12 @@ variable "upload_cors_origins" {
   https://dashboards.<hostname>). Empty: no CORS rule.
   EOT
 }
+
+variable "hefs_data_bucket" {
+  type        = string
+  default     = null
+  description = <<-EOT
+  Name of the public HEFS-FEWS data bucket (hefs-data.tf), or null for no bucket.
+  Only teehr-hub-use1 sets this; us-east-2's ciroh-rti-hefs-data is hand-made.
+  EOT
+}
