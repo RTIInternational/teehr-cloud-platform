@@ -16,8 +16,8 @@
 - `terraform/iceberg-s3-warehouse-readonly-irsa.tf`: Jupyter's read-only role can also read the new bucket. The
   old bucket stays until the move is done.
 - `hefs_data_bucket` variable and output, plus a `hefs_data_s3_writers_group` output.
-- `docs/hefs-bucket-move.md`: copy runbook on a temporary EC2 instance that isn't in Terraform, plus cutover,
-  rollback and teardown.
+- `docs/hefs-bucket-move.md`: `aws s3 sync` from a laptop (server-side, about 278 GB) excluding `GEFSv12/`,
+  which isn't needed, plus cutover and rollback. The old bucket, `GEFSv12/` included, is deleted after a soak.
 
 ### Why
 - Since the 2026-10-21 cluster move, every HEFS read from teehr-hub crosses regions.

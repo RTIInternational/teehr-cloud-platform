@@ -5,42 +5,46 @@ Runbook for copying the public HEFS-FEWS data bucket `ciroh-rti-hefs-data` (us-e
 (RTIInternational/teehr-hub#525). The cluster moved on 2026-10-21 (see [region-move.md](region-move.md)), so every
 HEFS read from it now crosses regions.
 
-The copy runs on a temporary EC2 instance in the use1 VPC that isn't in Terraform. It's created by hand in step 2
-and deleted in step 7.
+**`GEFSv12/` isn't copied.** It's 8.8 TB of the 9.08 TB, hasn't been written since 2025-07, and isn't needed. It's
+deleted with the old bucket in step 7.
 
-Code blocks have no comments so they paste cleanly into zsh. The steps need an identity that can create IAM roles
-and EC2 instances (`ciroh_mdenno` in the other runbooks), plus the
-[Session Manager plugin](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)
-for the AWS CLI.
+The copy runs from a laptop with `aws s3 sync`, as the warehouse buckets did for the region move. Code blocks have
+no comments so they paste cleanly into zsh. Set `AWS_PROFILE` to your own profile for account 935462133478 first.
 
 ## What's in the bucket (2026-11-16)
 
 | | |
 |---|---|
 | Size | 9.08 TB, 921,519 objects, none over 5 GB |
-| Largest prefix | `GEFSv12/`: 8.8 TB, 250k objects, last written 2025-07-22 |
+| Copied | Everything except `GEFSv12/`: 278 GB, 671,092 objects (927 over 8 MB, largest 4.5 GB) |
+| Not copied | `GEFSv12/`: 8.8 TB, 250k objects, last written 2025-07-22 |
 | Last write | 2026-10-30 (`HEFS_FEWS/WGRFC`, `ohdPlugins/` in four RFCs, `FIRO/`) |
 | Writers | People with their own IAM credentials, by hand. No workflow or cluster role writes to it. |
 | Readers | Public `GetObject`. hefs-fews-hub downloads `HEFS_FEWS/<RFC>`. The Jupyter IRSA role can list. |
-| Settings | Public-read bucket policy, ACLs blocked, `BucketOwnerEnforced`, SSE-S3, no versioning, no lifecycle |
+| Settings | Public-read bucket policy, ACLs blocked, `BucketOwnerEnforced`, SSE-S3, no versioning, no lifecycle, no object tags |
 
 The new bucket has the same settings, plus a rule that aborts incomplete multipart uploads after 7 days.
 
-**Why EC2 and not a pod:** a pod would need an IRSA role, which is either more Terraform or a hand-made OIDC trust.
-It would also be at risk from spot reclaims and the autoscaler for the hours the copy takes. An instance with an
-instance profile and Session Manager needs none of that, and deleting it by tag leaves nothing behind. The copy is
-server-side (`CopyObject` and `UploadPartCopy`), so the instance only sends requests. It sits in a private subnet,
-where the S3 gateway endpoint carries the us-east-1 requests and there are no inbound ports.
+**Why a laptop is enough:** the copy is server-side (`CopyObject`, plus `UploadPartCopy` for objects over 8 MB), so
+the data never passes through the machine running it. That machine only sends about 671k small requests, so the
+time depends on how many run at once, not on bandwidth. Expect roughly 1–2 hours at 64 concurrent requests. The
+sync is incremental, so if the laptop sleeps or the network drops, run it again and it picks up where it stopped.
 
-**Cost, at list prices:** about $0.01/GB inter-region transfer (Ohio to N. Virginia), so about $91 for everything
-or about $3 without `GEFSv12/`. Copy requests cost a few dollars, the instance under $10, and each copy costs about
-$209/month to store until the old bucket is deleted.
+**Cost, at list prices:** about $3 inter-region transfer ($0.01/GB, Ohio to N. Virginia) and about $3.50 in copy
+requests. The new bucket costs about $6.40/month to store. Deleting the old bucket in step 7 saves about $209/month.
+
+**Who runs what:**
+
+| Step | Needs |
+|---|---|
+| 1 | Write access to this repo, and a `production` reviewer to approve the workflow |
+| 2–4, 5.1–5.3, 5.6 | The operator's own IAM user, in `teehr-hub-use1-hefs-data-s3-writers` (step 2). It can already read the old bucket. |
+| 2, 5.4 | An admin (`iam:AddUserToGroup`) |
+| 5.5, 7 | An admin: put, delete and remove the old bucket's policy, delete its objects, delete the bucket |
 
 ```bash
-export AWS_PROFILE=ciroh_mdenno AWS_REGION=us-east-1
 SRC=ciroh-rti-hefs-data
 DST=ciroh-rti-hefs-data-use1
-NAME=hefs-bucket-copy
 ```
 
 ## 1. Create the bucket (Terraform)
@@ -58,95 +62,56 @@ aws s3api get-bucket-policy --bucket $DST --query Policy --output text
 aws s3api get-public-access-block --bucket $DST
 ```
 
-## 2. Create the copy instance
+## 2. Give the operator write access
 
-An IAM role with read on the source and write on the destination, plus Session Manager:
-
-```bash
-cat > /tmp/$NAME-trust.json <<'EOF'
-{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"ec2.amazonaws.com"},"Action":"sts:AssumeRole"}]}
-EOF
-cat > /tmp/$NAME-s3.json <<EOF
-{"Version":"2012-10-17","Statement":[
- {"Effect":"Allow","Action":["s3:ListBucket","s3:GetBucketLocation"],"Resource":["arn:aws:s3:::$SRC","arn:aws:s3:::$DST"]},
- {"Effect":"Allow","Action":["s3:GetObject","s3:GetObjectTagging"],"Resource":"arn:aws:s3:::$SRC/*"},
- {"Effect":"Allow","Action":["s3:GetObject","s3:PutObject","s3:PutObjectTagging","s3:DeleteObject","s3:AbortMultipartUpload","s3:ListMultipartUploadParts"],"Resource":"arn:aws:s3:::$DST/*"}
-]}
-EOF
-aws iam create-role --role-name $NAME --assume-role-policy-document file:///tmp/$NAME-trust.json --tags Key=Purpose,Value=teehr-hub-525
-aws iam put-role-policy --role-name $NAME --policy-name s3-copy --policy-document file:///tmp/$NAME-s3.json
-aws iam attach-role-policy --role-name $NAME --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
-aws iam create-instance-profile --instance-profile-name $NAME
-aws iam add-role-to-instance-profile --instance-profile-name $NAME --role-name $NAME
-```
-
-A private subnet in the use1 VPC (us-east-1c, where the node groups run) and a security group with no inbound
-rules:
+An admin adds the operator's IAM user to the writers group. The group's policy covers what `sync` needs on the new
+bucket, `--delete` included.
 
 ```bash
-VPC=$(aws ec2 describe-vpcs --filters Name=tag:Name,Values=teehr-hub-use1-vpc --query 'Vpcs[0].VpcId' --output text)
-SUBNET=$(aws ec2 describe-subnets --filters Name=vpc-id,Values=$VPC Name=availability-zone,Values=us-east-1c Name=tag:Name,Values='*private*' --query 'Subnets[0].SubnetId' --output text)
-SG=$(aws ec2 create-security-group --group-name $NAME --description "HEFS bucket copy (teehr-hub#525), egress only" --vpc-id $VPC --query GroupId --output text)
-echo $VPC $SUBNET $SG
+aws iam add-user-to-group --group-name teehr-hub-use1-hefs-data-s3-writers --user-name <operator>
 ```
 
-An Amazon Linux 2023 instance, which comes with the AWS CLI v2 and the SSM agent. The data never passes through
-it, so its network and disk don't matter. What it needs is steady CPU for the CLI's request threads, which is why
-it's a `c7i.large` (2 vCPU) and not a burstable `t3`/`t4g`: those run out of CPU credits on a multi-hour copy and
-slow to their baseline. Allow about a minute after
-`create-instance-profile` before launching, or the launch can fail on the profile:
+If the operator isn't one of the regular writers, remove them again after step 5
+(`aws iam remove-user-from-group`).
+
+## 3. Bulk copy
+
+Raise the CLI's concurrency for your profile. The default is 10, which makes the copy several times slower:
 
 ```bash
-AMI=$(aws ssm get-parameter --name /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64 --query Parameter.Value --output text)
-IID=$(aws ec2 run-instances --image-id $AMI --instance-type c7i.large --subnet-id $SUBNET --security-group-ids $SG \
-  --iam-instance-profile Name=$NAME --metadata-options HttpTokens=required \
-  --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$NAME},{Key=Purpose,Value=teehr-hub-525}]" \
-  --query 'Instances[0].InstanceId' --output text)
-aws ec2 wait instance-status-ok --instance-ids $IID
-aws ssm start-session --target $IID
+aws configure set s3.max_concurrent_requests 64 --profile "$AWS_PROFILE"
+aws configure set s3.max_queue_size 10000 --profile "$AWS_PROFILE"
 ```
 
-## 3. Bulk copy (on the instance)
-
-Run the copy in tmux so it survives a dropped session. Reconnect with `aws ssm start-session --target $IID`, then
-`sudo su - ec2-user -c 'tmux attach'`.
+Keep the machine awake for the whole run (on WSL, Windows sleep stops it too), and run it inside `tmux` if you have
+it:
 
 ```bash
-sudo dnf install -y tmux
-sudo su - ec2-user
-tmux new -s copy
+time aws s3 sync s3://$SRC s3://$DST --source-region us-east-2 --region us-east-1 --exclude "GEFSv12/*" --only-show-errors 2>&1 | tee -a hefs-sync-$(date -u +%Y%m%dT%H%M%SZ).log
 ```
 
-```bash
-SRC=ciroh-rti-hefs-data
-DST=ciroh-rti-hefs-data-use1
-aws configure set default.s3.max_concurrent_requests 64
-aws configure set default.s3.max_queue_size 10000
-aws configure set default.s3.multipart_chunksize 64MB
-time aws s3 sync s3://$SRC s3://$DST --source-region us-east-2 --region us-east-1 --only-show-errors 2>&1 | tee -a sync-$(date -u +%Y%m%dT%H%M%SZ).log
-```
+**Every sync and listing of the source in this runbook excludes `GEFSv12/`.** A sync without `--exclude` would
+start copying 8.8 TB.
 
-To leave out a prefix (see [Open questions](#open-questions), e.g. `GEFSv12/`), add `--exclude "GEFSv12/*"` to this
-sync and every later one.
+If it stops, run the same command again: objects that already match by size and timestamp are skipped. To check
+progress from another terminal, run `aws s3 ls s3://$DST --recursive --summarize | tail -2`. Afterwards, put the
+concurrency back with `aws configure set s3.max_concurrent_requests 10 --profile "$AWS_PROFILE"`.
 
-The sync is incremental. If it stops, run it again and it skips objects that already match by size and timestamp.
-After half an hour, check progress from your laptop with
-`aws s3 ls s3://$DST --recursive --summarize | tail -2` (slow on large prefixes) or the bucket's CloudWatch
-metrics (updated daily). If it's much slower than about 300 MB/s and `top` shows the `aws` process using a full core,
-try `max_concurrent_requests` 128 on a `c7i.xlarge`.
-
-## 4. Verify (on the instance)
+## 4. Verify
 
 Compare keys and sizes. ETags can differ for multipart copies, so they aren't compared.
 
 ```bash
-aws s3api list-objects-v2 --bucket $SRC --region us-east-2 --query 'Contents[].[Key,Size]' --output text | sort > src.tsv
-aws s3api list-objects-v2 --bucket $DST --region us-east-1 --query 'Contents[].[Key,Size]' --output text | sort > dst.tsv
-wc -l src.tsv dst.tsv
-diff src.tsv dst.tsv | head -50
+aws s3api list-objects-v2 --bucket $SRC --region us-east-2 --query 'Contents[].[Key,Size]' --output text | grep -v '^GEFSv12/' | sort > hefs-src.tsv
+aws s3api list-objects-v2 --bucket $DST --region us-east-1 --query 'Contents[].[Key,Size]' --output text | sort > hefs-dst.tsv
+wc -l hefs-src.tsv hefs-dst.tsv
+diff hefs-src.tsv hefs-dst.tsv | head -50
 ```
 
-Anyone can read objects, but listing needs credentials. From your laptop:
+Both files should have the same line count (671,092 as of 2026-11-16, plus anything written since), and `diff`
+should print nothing.
+
+Anyone can read objects, but listing needs credentials:
 
 ```bash
 KEY=$(aws s3api list-objects-v2 --bucket $DST --prefix HEFS_FEWS/ --max-items 1 --query 'Contents[0].Key' --output text)
@@ -159,22 +124,23 @@ The first should print 200 and the second 403.
 ## 5. Cutover
 
 1. **Freeze writes** to `ciroh-rti-hefs-data`: tell everyone who writes to it, then wait for confirmation.
-2. **Final sync** on the instance. Do a dry run first, so the deletes (objects removed from the source since the
-   bulk copy) can be reviewed:
+2. **Final sync.** Do a dry run first, so the deletes (objects removed from the source since the bulk copy) can be
+   reviewed. `--exclude` also keeps `--delete` from touching anything under `GEFSv12/`.
 
    ```bash
-   aws s3 sync s3://$SRC s3://$DST --source-region us-east-2 --region us-east-1 --delete --dryrun | tee final-dryrun.log | grep -c delete
-   aws s3 sync s3://$SRC s3://$DST --source-region us-east-2 --region us-east-1 --delete --only-show-errors 2>&1 | tee -a final-sync.log
+   aws s3 sync s3://$SRC s3://$DST --source-region us-east-2 --region us-east-1 --exclude "GEFSv12/*" --delete --dryrun | tee hefs-final-dryrun.log | grep -c delete
+   aws s3 sync s3://$SRC s3://$DST --source-region us-east-2 --region us-east-1 --exclude "GEFSv12/*" --delete --only-show-errors 2>&1 | tee -a hefs-final-sync.log
    ```
 
    Then repeat step 4.
 3. **Switch readers.** In RTIInternational/hefs-fews-hub, change `BUCKET_NAME` in
    `src/hefs_fews_hub/dashboard_funcs.py` and `panel_dashboard.py` to `ciroh-rti-hefs-data-use1`, and
    `AWS_DEFAULT_REGION` in `entrypoint.sh`, `.env.example` and `docs/AWS_SETUP.md` to `us-east-1`. Update the bucket
-   name in `docs/notes.md`. Release a new image, then point the HEFS profile choices in teehr-hub (generated by
+   name in `docs/notes.md`. Images only publish on a `v*.*.*` tag, so the PR can merge early. Release by tagging
+   it, then point the HEFS profile choices in teehr-hub (generated by
    `teehr-cloud-core/jupyterhub-profiles/generate_profile_list.py`) at the new tag. Also update the `wget` URL in
    RTIInternational/teehr `playground/metrics/calculate_reference_forecast.ipynb`.
-4. **Switch writers.** Add each writer's IAM user to the group:
+4. **Switch writers.** An admin adds each writer's IAM user to the group:
 
    ```bash
    aws iam add-user-to-group --group-name teehr-hub-use1-hefs-data-s3-writers --user-name <user>
@@ -193,39 +159,37 @@ The first should print 200 and the second 403.
 
 Before step 5.5, nothing about the old bucket has changed, so revert the hefs-fews-hub release. After step 5.5,
 also restore the old policy by running the same command without the `MovedToUse1` statement. Anything written to
-the new bucket in the meantime has to be copied back by hand: run the step 3 sync in the other direction without
-`--delete`.
+the new bucket in the meantime has to be copied back by hand: run the step 3 sync in the other direction, without
+`--exclude` or `--delete`.
 
-## 7. Delete the copy instance and its IAM
+Once step 7 has run there's no rollback: the old bucket and `GEFSv12/` are gone.
 
-From your laptop, once step 5 is done. Nothing else in the account has the `teehr-hub-525` tag.
+## 7. After a soak period: delete the old bucket, `GEFSv12/` included
 
-```bash
-aws ec2 terminate-instances --instance-ids $IID
-aws ec2 wait instance-terminated --instance-ids $IID
-aws ec2 delete-security-group --group-id $SG
-aws iam remove-role-from-instance-profile --instance-profile-name $NAME --role-name $NAME
-aws iam delete-instance-profile --instance-profile-name $NAME
-aws iam detach-role-policy --role-name $NAME --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
-aws iam delete-role-policy --role-name $NAME --policy-name s3-copy
-aws iam delete-role --role-name $NAME
-aws resourcegroupstaggingapi get-resources --tag-filters Key=Purpose,Values=teehr-hub-525 --query 'ResourceTagMappingList[].ResourceARN'
-```
+This can't be undone. Do it once nothing has reported missing data for the soak period. The old bucket has no
+request metrics, so CloudWatch can't show whether anything still reads it. If that matters, turn on server access
+logging at cutover.
 
-The last command should print `[]`. (Terminated instances can show for up to an hour.)
+1. Repeat step 4 once more, so the new bucket is known to be complete.
+2. Remove the step 5.5 policy. Its `Deny` on `s3:DeleteObject` applies to admins too, so nothing can be deleted
+   while it's in place:
 
-## 8. After a soak period
+   ```bash
+   aws s3api delete-bucket-policy --bucket $SRC --region us-east-2
+   ```
 
-- Delete `ciroh-rti-hefs-data` (us-east-2) once nothing reads it. The bucket's daily `GetRequests` CloudWatch
-  metrics need request metrics turned on, so check for missing-data reports from users instead, or turn on server
-  access logging for the soak.
-- Remove the old bucket's ARNs from `terraform/iceberg-s3-warehouse-readonly-irsa.tf`.
+3. Delete every object, `GEFSv12/` included (about 921k objects, deleted 1,000 per request), then the bucket:
+
+   ```bash
+   aws s3 rb s3://$SRC --force --region us-east-2
+   ```
+
+   If it's interrupted, run it again.
+4. In this repo, remove `ciroh-rti-hefs-data`'s ARNs from `terraform/iceberg-s3-warehouse-readonly-irsa.tf` and
+   apply with the `terraform-use1` workflow.
 
 ## Open questions
 
-- **`GEFSv12/`:** 97% of the data (8.8 TB) and untouched since 2025-07. Nothing in RTIInternational reads it by
-  name. Does it move, stay in us-east-2, or go to a cheaper storage class? Leaving it out cuts the copy cost from
-  about $91 to $3 and saves about $200/month of storage.
 - **Writers:** who has write access to the old bucket now (needs an account admin's IAM export), and which IAM
   users join `teehr-hub-use1-hefs-data-s3-writers`? Is the hefs-fews-hub CI key (`AWI_RTI_HEFS_*`) one of them?
 - **Delete permission:** the writers' policy allows `DeleteObject`, since configurations get replaced wholesale.
@@ -233,6 +197,4 @@ The last command should print `[]`. (Terminated instances can show for up to an 
 - **Versioning:** the old bucket has none, which matches what was set up here. Hand edits like the 2026-10-29
   `WGRFC_backup` copy suggest a version history would be worth having, with noncurrent versions expiring after
   about 30 days.
-- **Old bucket:** after the soak, delete it, or keep it read-only for anyone outside RTI with the old URLs?
-- **Who runs it:** the steps need IAM and EC2 create permissions, so an account admin (or someone given them
-  for this) runs steps 2-7.
+- **Soak length:** how long before step 7? The old bucket's public URLs may be in use outside RTI.
