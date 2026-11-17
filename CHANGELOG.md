@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased (HEFS data bucket)
+
+### Summary
+- Added `ciroh-rti-hefs-data-use1`, a Terraform-managed us-east-1 replacement for the hand-made us-east-2
+  `ciroh-rti-hefs-data` bucket, and a runbook for copying the data and switching over (#40,
+  RTIInternational/teehr-hub#525).
+
+### What Changed
+- `terraform/s3.tf`: the bucket, created only when `hefs_data_bucket` is set (use1). Same settings as the
+  old bucket: public `GetObject`, ACLs blocked, `BucketOwnerEnforced`, SSE-S3. It also aborts incomplete
+  multipart uploads after 7 days.
+- `terraform/hefs-data-policies.tf`: `<cluster>-hefs-data-s3-write` policy and `<cluster>-hefs-data-s3-writers`
+  group for the people who maintain the data. Membership is managed by hand.
+- `terraform/iceberg-s3-warehouse-readonly-irsa.tf`: Jupyter's read-only role can also read the new bucket. The
+  old bucket stays until the move is done.
+- `hefs_data_bucket` variable and output, plus a `hefs_data_s3_writers_group` output.
+- `docs/hefs-bucket-move.md`: `aws s3 sync` from a laptop (server-side, about 278 GB) excluding `GEFSv12/`,
+  which isn't needed, plus cutover and rollback. The old bucket, `GEFSv12/` included, is deleted after a soak.
+
+### Why
+- Since the 2026-10-21 cluster move, every HEFS read from teehr-hub crosses regions.
+
 ## Unreleased (Terraform workflow fix)
 
 ### Summary

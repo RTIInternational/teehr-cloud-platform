@@ -38,10 +38,18 @@ data "aws_iam_policy_document" "iceberg_s3_warehouse_readonly" {
       "s3:GetObject",
       "s3:ListBucket"
     ]
-    resources = [
-      "arn:aws:s3:::ciroh-rti-hefs-data",
-      "arn:aws:s3:::ciroh-rti-hefs-data/*"
-    ]
+    # The hand-made us-east-2 bucket stays until the move (teehr-hub#525) is
+    # done; the s3.tf hefs_data bucket is added on stacks that create it.
+    resources = concat(
+      [
+        "arn:aws:s3:::ciroh-rti-hefs-data",
+        "arn:aws:s3:::ciroh-rti-hefs-data/*",
+      ],
+      local.hefs_data_enabled ? [
+        aws_s3_bucket.hefs_data[0].arn,
+        "${aws_s3_bucket.hefs_data[0].arn}/*",
+      ] : [],
+    )
   }
 }
 

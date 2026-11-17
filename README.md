@@ -101,7 +101,8 @@ in-cluster bootstrap steps; see [docs/new-regional-stack.md](docs/new-regional-s
 
 ### Region move
 
-The us-east-2 to us-east-1 cutover runbook, with rollback, is [docs/region-move.md](docs/region-move.md).
+The us-east-2 to us-east-1 cutover runbook, with rollback, is [docs/region-move.md](docs/region-move.md). The HEFS
+data bucket, which moved separately, is [docs/hefs-bucket-move.md](docs/hefs-bucket-move.md).
 
 ### Upgrading the EKS version
 

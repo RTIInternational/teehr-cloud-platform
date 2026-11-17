@@ -36,6 +36,9 @@ db_backup_bucket          = "teehr-db-backups-use1"
 upload_staging_bucket     = "teehr-upload-staging-use1"
 upload_cors_origins       = ["https://dashboards.teehr.rtiamanzi.org", "https://control-plane.teehr.rtiamanzi.org"]
 
+# Replaces the hand-made us-east-2 ciroh-rti-hefs-data (teehr-hub#525).
+hefs_data_bucket = "ciroh-rti-hefs-data-use1"
+
 # CIROH project IDs for dedicated node groups
 # Each project ID will create: nb-r5-xlarge-{id}, nb-r5-4xlarge-{id}, spark-r5-4xlarge-spot-{id}
 project_ids = ["MMM", "Testbed", "FIRO", "ResOps", "FFF"]

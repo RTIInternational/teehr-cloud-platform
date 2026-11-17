@@ -13,7 +13,7 @@ output "s3_vpc_endpoint_id" {
 
 output "iceberg_s3_warehouse_readonly_role_arn" {
   value       = aws_iam_role.iceberg_s3_warehouse_readonly_irsa.arn
-  description = "ARN of the read-only IAM role for the Jupyter service account to access external, non-warehouse data (e.g. ciroh-rti-hefs-data)"
+  description = "ARN of the read-only IAM role for the Jupyter service account to access external, non-warehouse data (the HEFS-FEWS data buckets)"
 }
 
 output "iceberg_s3_warehouse_rw_role_arn" {
@@ -70,4 +70,14 @@ output "upload_staging_bucket" {
 output "control_plane_role_arn" {
   value       = aws_iam_role.control_plane_irsa.arn
   description = "ARN of the IRSA role for the teehr-control-plane service account: the upload staging bucket only"
+}
+
+output "hefs_data_bucket" {
+  value       = local.hefs_data_enabled ? aws_s3_bucket.hefs_data[0].bucket : null
+  description = "Public HEFS-FEWS data bucket (hefs-fews-hub BUCKET_NAME), or null on stacks without one"
+}
+
+output "hefs_data_s3_writers_group" {
+  value       = local.hefs_data_enabled ? aws_iam_group.hefs_data_s3_writers[0].name : null
+  description = "IAM group whose members can write to the HEFS-FEWS data bucket; membership is managed by hand"
 }
