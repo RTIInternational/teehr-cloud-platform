@@ -39,7 +39,7 @@ data "aws_iam_policy_document" "iceberg_s3_warehouse_readonly" {
       "s3:ListBucket"
     ]
     # The hand-made us-east-2 bucket stays until the move (teehr-hub#525) is
-    # done; hefs-data.tf's bucket is added on stacks that create it.
+    # done; the s3.tf hefs_data bucket is added on stacks that create it.
     resources = concat(
       [
         "arn:aws:s3:::ciroh-rti-hefs-data",

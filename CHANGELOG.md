@@ -8,7 +8,7 @@
   RTIInternational/teehr-hub#525).
 
 ### What Changed
-- `terraform/hefs-data.tf`: the bucket, created only when `hefs_data_bucket` is set (use1). Same settings as the
+- `terraform/s3.tf`: the bucket, created only when `hefs_data_bucket` is set (use1). Same settings as the
   old bucket: public `GetObject`, ACLs blocked, `BucketOwnerEnforced`, SSE-S3. It also aborts incomplete
   multipart uploads after 7 days.
 - `terraform/hefs-data-policies.tf`: `<cluster>-hefs-data-write` policy and `<cluster>-hefs-data-writers` group

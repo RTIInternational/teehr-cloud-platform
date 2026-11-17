@@ -1,4 +1,4 @@
-# Write access to the HEFS-FEWS data bucket (hefs-data.tf).
+# Write access to the HEFS-FEWS data bucket (s3.tf).
 #
 # The data is maintained by hand (aws s3 cp/sync from people's own IAM users),
 # not by a workflow, so access goes through a group. Membership isn't managed

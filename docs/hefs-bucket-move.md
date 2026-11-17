@@ -1,7 +1,7 @@
 # HEFS bucket move: us-east-2 to us-east-1
 
 Runbook for copying the public HEFS-FEWS data bucket `ciroh-rti-hefs-data` (us-east-2, hand-made) to
-`ciroh-rti-hefs-data-use1` (us-east-1, `terraform/hefs-data.tf`) and switching its users over
+`ciroh-rti-hefs-data-use1` (us-east-1, `terraform/s3.tf`) and switching its users over
 (RTIInternational/teehr-hub#525). The cluster moved on 2026-10-21 (see [region-move.md](region-move.md)), so every
 HEFS read from it now crosses regions.
 
