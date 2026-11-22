@@ -611,6 +611,46 @@ module "eks" {
       }
     })
 
+    # Control-plane run jobs (evaluation runs, ADR-0017): one pod a node, with
+    # their own taint so nothing else lands here and they never share nodes with
+    # the platform's services or other jobs. On-demand: a run's pod losing its
+    # node mid-shard costs a retry, and a spot reclaim takes every pod at once.
+    runs-r5-2xlarge = merge(local.eks_node_group_defaults, {
+      name          = "runs-r5-2xlarge"
+      iam_role_name = "${local.cluster_name}-runs-r5-2xlarge"
+
+      min_size     = 0
+      max_size     = 20
+      desired_size = 0
+
+      instance_types = ["r5.2xlarge"]
+      labels = {
+        "teehr-hub/nodegroup-name"         = "runs-r5-2xlarge"
+        "node.kubernetes.io/instance-type" = "r5.2xlarge"
+      }
+      taints = {
+        dedicated = {
+          key    = "teehr-hub/dedicated"
+          value  = "runs"
+          effect = "NO_SCHEDULE"
+        }
+        dedicated_alt = {
+          key    = "teehr-hub_dedicated"
+          value  = "runs"
+          effect = "NO_SCHEDULE"
+        }
+      }
+      tags = {
+        "k8s.io/cluster-autoscaler/enabled"                                                 = "true"
+        "k8s.io/cluster-autoscaler/${local.cluster_name}"                                   = "owned"
+        "k8s.io/cluster-autoscaler/node-template/label/teehr-hub/node-purpose/node-purpose" = "runs"
+        "k8s.io/cluster-autoscaler/node-template/taint/teehr-hub/dedicated"                 = "runs:NoSchedule"
+        "k8s.io/cluster-autoscaler/node-template/taint/teehr-hub_dedicated"                 = "runs:NoSchedule"
+        "teehr-hub/nodegroup-name"                                                          = "runs-r5-2xlarge"
+        "Project"                                                                           = "TEEHR"
+      }
+    })
+
     spark-r5-4xlarge-spot = merge(local.eks_node_group_defaults, {
       name          = "spark-r5-4xlarge-spot"
       iam_role_name = "${local.cluster_name}-spark-r5-4xlarge-spot"
