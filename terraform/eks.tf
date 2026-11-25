@@ -224,8 +224,7 @@ module "eks" {
   # Grants whoever applies cluster admin, so Terraform's kubernetes/helm
   # providers can reach a new cluster. Turn it off once the cluster is built:
   # it follows the caller, so applies by different identities (a dev, the CI
-  # roles) would swap the entry. The us-east-2 cluster has an equivalent
-  # access entry created outside Terraform, so it leaves this off.
+  # roles) would swap the entry.
   enable_cluster_creator_admin_permissions = var.cluster_creator_admin
 
   # Fixed, so the key policy doesn't follow whoever runs Terraform (the

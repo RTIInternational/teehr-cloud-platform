@@ -117,7 +117,7 @@ Confirm the exact state address first with `terraform state list | grep cert`.
 Targeted, so the plan graph excludes the ClusterIssuer whose CRD does not exist yet:
 
 ```bash
-terraform apply -target=helm_release.cert_manager -var-file=teehr-hub.tfvars
+terraform apply -target=helm_release.cert_manager -var-file=teehr-hub-use1.tfvars
 ```
 
 Wait for all three deployments to be available before continuing — the webhook in
@@ -132,7 +132,7 @@ kubectl -n cert-manager rollout status deploy/cert-manager-cainjector
 ### 4. Recreate the ClusterIssuer
 
 ```bash
-terraform apply -var-file=teehr-hub.tfvars
+terraform apply -var-file=teehr-hub-use1.tfvars
 kubectl get clusterissuer letsencrypt-prod -o wide
 ```
 

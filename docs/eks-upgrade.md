@@ -3,7 +3,7 @@
 EKS upgrades the control plane **one minor version at a time**. Going from 1.33 to 1.36
 is three separate applies, not one.
 
-There is no CI for this repo, so every apply is run by hand from a workstation. The branch
+These hops were applied by hand from a workstation; the **Terraform use1** workflow can also run them. The branch
 carries one commit per hop so the history records what was applied and when; the PR goes up
 once all three hops are done and verified.
 
@@ -32,7 +32,7 @@ is off, so your own user has no cluster access of its own.
 
 ```bash
 aws sts get-session-token --serial-number <mfa-arn> --token-code <code>
-aws eks update-kubeconfig --name teehr-hub --region us-east-2 \
+aws eks update-kubeconfig --name teehr-hub-use1 --region us-east-1 \
   --role-arn arn:aws:iam::<account>:role/teehr-hub-teehr-hub-admin
 ```
 
@@ -107,7 +107,7 @@ and 3 rather than relying on pods being `Running`, and revisit when Contour 1.34
 
 ## Working through the hops locally
 
-Stay on the branch and walk `cluster_version` in `teehr-hub.tfvars` forward one minor at a
+Stay on the branch and walk `cluster_version` in `teehr-hub-use1.tfvars` forward one minor at a
 time, applying and verifying at each stop. The commits are already written in that order:
 
 | Stage | `cluster_version` | What it covers |
@@ -141,8 +141,8 @@ Check EKS cluster insights for deprecated API usage. Insights look back over a r
 30-day window and refresh every 24 hours, so do this well before you intend to apply:
 
 ```bash
-aws eks list-insights --cluster-name teehr-hub --region us-east-2
-aws eks describe-insight --cluster-name teehr-hub --region us-east-2 --id <insight-id>
+aws eks list-insights --cluster-name teehr-hub-use1 --region us-east-1
+aws eks describe-insight --cluster-name teehr-hub-use1 --region us-east-1 --id <insight-id>
 ```
 
 Confirm the control plane and all nodes are on the same minor before starting a hop —
@@ -159,13 +159,13 @@ control plane ENIs.
 ### 2. Apply
 
 ```bash
-terraform init -reconfigure -backend-config=backends/use2.hcl
-terraform plan -var-file=teehr-hub.tfvars -out=hop.tfplan
+terraform init -reconfigure -backend-config=backends/use1.hcl
+terraform plan -var-file=teehr-hub-use1.tfvars -out=hop.tfplan
 terraform apply hop.tfplan
 ```
 
 Applying a saved plan rather than re-planning at apply time means what you reviewed is
-exactly what runs — worth it here because there is no CI diffing it for you. `*.tfplan` is
+exactly what runs. `*.tfplan` is
 gitignored.
 
 The control plane update takes several minutes and cannot be paused or stopped. If EKS's
@@ -236,7 +236,7 @@ kubectl get nodes -o 'custom-columns=NAME:.metadata.name,VERSION:.status.nodeInf
   path is still live.
 - Trigger a scale-up on one notebook node group and one spot Spark node group to confirm
   autoscaling and the node-termination-handler still work on the new AMI.
-- `terraform plan -var-file=teehr-hub.tfvars` reports no pending changes.
+- `terraform plan -var-file=teehr-hub-use1.tfvars` reports no pending changes.
 
 ## Known snag: DaemonSet annotation drift
 

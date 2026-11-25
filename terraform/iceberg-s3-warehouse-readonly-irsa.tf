@@ -1,5 +1,5 @@
 # Read-only access for the Jupyter service account to external, non-warehouse
-# data only (e.g. ciroh-rti-hefs-data). Warehouse access no longer goes
+# data only (e.g. ciroh-rti-hefs-data-use1). Warehouse access no longer goes
 # through this role for anyone — Spark was removed, and Jupyter's own
 # Iceberg warehouse reads now go through Polaris-vended credentials like
 # every other client. This role name is legacy; its scope is now HEFS-only.
@@ -38,18 +38,10 @@ data "aws_iam_policy_document" "iceberg_s3_warehouse_readonly" {
       "s3:GetObject",
       "s3:ListBucket"
     ]
-    # The hand-made us-east-2 bucket stays until the move (teehr-hub#525) is
-    # done; the s3.tf hefs_data bucket is added on stacks that create it.
-    resources = concat(
-      [
-        "arn:aws:s3:::ciroh-rti-hefs-data",
-        "arn:aws:s3:::ciroh-rti-hefs-data/*",
-      ],
-      local.hefs_data_enabled ? [
-        aws_s3_bucket.hefs_data[0].arn,
-        "${aws_s3_bucket.hefs_data[0].arn}/*",
-      ] : [],
-    )
+    resources = local.hefs_data_enabled ? [
+      aws_s3_bucket.hefs_data[0].arn,
+      "${aws_s3_bucket.hefs_data[0].arn}/*",
+    ] : []
   }
 }
 

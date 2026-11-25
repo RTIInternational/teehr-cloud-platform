@@ -20,8 +20,7 @@ cluster_creator_admin = false
 # No default StorageClass on clusters created on 1.30+.
 create_default_storage_class = true
 
-# Built and pushed by RTIInternational/hefs-fews-hub. us-east-2 has a
-# hand-made repo with this name, so it's only managed here.
+# Built and pushed by RTIInternational/hefs-fews-hub.
 additional_ecr_repos = [
   { name = "hefs-fews-hub", max_image_count = 10 },
 ]
@@ -36,7 +35,7 @@ db_backup_bucket          = "teehr-db-backups-use1"
 upload_staging_bucket     = "teehr-upload-staging-use1"
 upload_cors_origins       = ["https://dashboards.teehr.rtiamanzi.org", "https://control-plane.teehr.rtiamanzi.org"]
 
-# Replaces the hand-made us-east-2 ciroh-rti-hefs-data (teehr-hub#525).
+# HEFS-FEWS data (teehr-hub#525).
 hefs_data_bucket = "ciroh-rti-hefs-data-use1"
 
 # CIROH project IDs for dedicated node groups

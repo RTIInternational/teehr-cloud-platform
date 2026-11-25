@@ -5,6 +5,9 @@ Runbook for copying the public HEFS-FEWS data bucket `ciroh-rti-hefs-data` (us-e
 (RTIInternational/teehr-hub#525). The cluster moved on 2026-10-21 (see [region-move.md](region-move.md)), so every
 HEFS read from it now crosses regions.
 
+**Done.** The old bucket, `GEFSv12/` included, was deleted on 2026-11-25 (step 7) after a final check showed
+`ciroh-rti-hefs-data-use1` had every other object.
+
 **`GEFSv12/` isn't copied.** It's 8.8 TB of the 9.08 TB, hasn't been written since 2025-07, and isn't needed. It's
 deleted with the old bucket in step 7.
 
