@@ -5,6 +5,9 @@ Runbook for moving teehr-hub from the `teehr-hub` cluster (us-east-2) to `teehr-
 `*.use1.teehr.rtiamanzi.org` staging hosts with its Prefect schedules paused, `/data` is replicating from
 us-east-2, and the warehouse buckets have had a bulk copy.
 
+**Done.** Cutover happened on 2026-10-21, and the us-east-2 stack, its warehouse buckets, EBS volumes, EFS backups
+and hand-made ECR repos were deleted on 2026-11-25 (#20). The rollback section no longer applies.
+
 Code blocks have no comments so they paste cleanly into zsh. Run them from the repo named at the start of each
 step, **on `main`**: older branches lack fixes to these scripts. All AWS commands assume
 `export AWS_PROFILE=ciroh_mdenno`.

@@ -5,10 +5,9 @@ stack for the region move (RTIInternational/teehr-hub#462). Shared resources (DN
 live in `terraform/global/` and aren't created again.
 
 A stack is a backend file in `terraform/backends/` plus a tfvars file. The us-east-1 stack is
-`backends/use1.hcl` + `teehr-hub-use1.tfvars`. What makes it safe to build next to us-east-2:
+`backends/use1.hcl` + `teehr-hub-use1.tfvars`. What made it safe to build next to us-east-2:
 
-- `cluster_name` differs (`teehr-hub-use1`), so every IAM name built from it is new. `legacy_iam_names` stays
-  off.
+- `cluster_name` differs (`teehr-hub-use1`), so every IAM name built from it is new.
 - The warehouse bucket names are new; S3 names are global.
 - `cluster_creator_admin = true` gives the identity running Terraform an EKS access entry, which the
   kubernetes/helm providers need on the new cluster. Set it back to `false` once the stack is built, before

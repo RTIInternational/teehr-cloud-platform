@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased (us-east-2 teardown)
+
+### Summary
+- The us-east-2 stack is gone (#20). Its stack-only code and config are removed.
+
+### What Changed
+- Removed `teehr-hub.tfvars` and `backends/use2.hcl`. The stack was destroyed and its leftovers (EBS volumes, EFS
+  recovery points, hand-made ECR repos, old OIDC providers) deleted by hand on 2026-11-25.
+- Removed `legacy_iam_names`; IAM role names are always cluster-prefixed.
+- Removed `efs_replication_destination`, `efs_replication_overwrite` and the EFS replication resource. `/data`
+  keeps overwrite protection `ENABLED`.
+- `iceberg-s3-warehouse-readonly-irsa.tf`: dropped the deleted `ciroh-rti-hefs-data` bucket.
+- `terraform/global/teehr-hub.tfvars`: dropped the `use1` `staging_ingress` entry, which removes the
+  `*.use1.teehr.rtiamanzi.org` records. The variable stays for future stacks.
+- Runbooks: `region-move.md` and `hefs-bucket-move.md` marked done; `eks-upgrade.md` and `cert-manager-upgrade.md`
+  point at use1.
+
 ## Unreleased (HEFS data bucket)
 
 ### Summary

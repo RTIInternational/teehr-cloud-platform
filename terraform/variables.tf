@@ -92,16 +92,6 @@ variable "terraform_apply_role_name" {
   EOT
 }
 
-variable "legacy_iam_names" {
-  type        = bool
-  default     = false
-  description = <<-EOT
-  Keep the original unprefixed IAM role names (ClusterAutoscalerIRSA,
-  AmazonEKS_EBS_CSI_DriverRole, ...). Only the us-east-2 stack sets this; IAM
-  names are account-wide, so any other stack needs the cluster-prefixed names.
-  EOT
-}
-
 variable "cluster_creator_admin" {
   type        = bool
   default     = false
@@ -117,27 +107,6 @@ variable "create_default_storage_class" {
   description = <<-EOT
   Create a gp3 StorageClass and mark it the cluster default. Needed on clusters
   created on Kubernetes 1.30+, where EKS no longer marks gp2 as default.
-  EOT
-}
-
-variable "efs_replication_overwrite" {
-  type        = string
-  default     = "ENABLED"
-  description = <<-EOT
-  EFS replication overwrite protection for /data. DISABLED allows another
-  file system to replicate into this one.
-  EOT
-}
-
-variable "efs_replication_destination" {
-  type = object({
-    file_system_id = string
-    region         = string
-  })
-  default     = null
-  description = <<-EOT
-  Existing file system in another region to replicate /data into. Its stack
-  must set efs_replication_overwrite = "DISABLED" first.
   EOT
 }
 
@@ -209,6 +178,5 @@ variable "hefs_data_bucket" {
   default     = null
   description = <<-EOT
   Name of the public HEFS-FEWS data bucket (s3.tf), or null for no bucket.
-  Only teehr-hub-use1 sets this; us-east-2's ciroh-rti-hefs-data is hand-made.
   EOT
 }

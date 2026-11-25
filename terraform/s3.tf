@@ -192,8 +192,7 @@ resource "aws_s3_bucket_cors_configuration" "upload_staging" {
   }
 }
 
-# HEFS-FEWS data (RTIInternational/teehr-hub#525): replaces the hand-made us-east-2
-# ciroh-rti-hefs-data. Public: anyone can GetObject (URLs are shared), listing needs
+# HEFS-FEWS data (RTIInternational/teehr-hub#525). Public: anyone can GetObject (URLs are shared), listing needs
 # credentials. Written by hand by the writers group (hefs-data-policies.tf).
 # Only created when var.hefs_data_bucket is set (use1): S3 names are global.
 locals {

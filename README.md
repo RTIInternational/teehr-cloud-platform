@@ -20,8 +20,8 @@ There are two kinds of Terraform root, each with its own state in the `teehr-ter
   Route 53 zone, and the CloudFront maintenance page. Nothing here depends on a cluster.
 - [terraform/](terraform/): one regional stack (VPC, EKS, EFS, S3 warehouse buckets, IRSA roles, ECR, in-cluster
   platform components). Each stack has a backend file in [terraform/backends/](terraform/backends/) and a
-  tfvars file: `teehr-hub-use1.tfvars` with `backends/use1.hcl` is the us-east-1 production stack, and
-  `teehr-hub.tfvars` with `backends/use2.hcl` is the us-east-2 stack, kept until teardown.
+  tfvars file: `teehr-hub-use1.tfvars` with `backends/use1.hcl` is the us-east-1 production stack. The
+  us-east-2 stack was torn down on 2026-11-25 (#20).
 
 ### Day-to-Day Commands
 
@@ -33,8 +33,6 @@ terraform init -reconfigure -backend-config=backends/use1.hcl
 terraform plan -var-file=teehr-hub-use1.tfvars
 terraform apply -var-file=teehr-hub-use1.tfvars
 ```
-
-For use2, use `backends/use2.hcl` and `teehr-hub.tfvars`.
 
 Global resources (see [docs/maintenance-page.md](docs/maintenance-page.md) before applying; a plain apply clears
 any banner message):
@@ -59,7 +57,7 @@ personal AWS credentials. Run it from the Actions tab or `gh workflow run terraf
    rejecting leaves a plan-only run.
 
 Any branch can run it. After applying from a branch, merge it soon, or plans from `main` will show its changes
-as reverts. `terraform/global/` and use2 are still applied by hand. Logs are public: sensitive values are redacted,
+as reverts. `terraform/global/` is still applied by hand. Logs are public: sensitive values are redacted,
 but don't add secrets as plain variables. CI pins Terraform 1.15.7 (`TF_VERSION`); keep local versions the same,
 since a newer version writing state can stop older ones reading it.
 
@@ -101,7 +99,8 @@ in-cluster bootstrap steps; see [docs/new-regional-stack.md](docs/new-regional-s
 
 ### Region move
 
-The us-east-2 to us-east-1 cutover runbook, with rollback, is [docs/region-move.md](docs/region-move.md). The HEFS
+The us-east-2 to us-east-1 cutover runbook is [docs/region-move.md](docs/region-move.md); us-east-2 was torn down
+on 2026-11-25. The HEFS
 data bucket, which moved separately, is [docs/hefs-bucket-move.md](docs/hefs-bucket-move.md).
 
 ### Upgrading the EKS version
